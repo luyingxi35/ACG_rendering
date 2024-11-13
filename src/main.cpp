@@ -1,42 +1,22 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <iostream>
-#include "scene/Model.h" 
-
-// 渲染窗口
-void renderLoop(Model& model) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    model.draw();
-    glfwSwapBuffers(glfwGetCurrentContext());
-}
+#include "scene/Scene.h"
 
 int main() {
-    if (!glfwInit()) {
-        std::cerr << "GLFW initialization failed!" << std::endl;
-        return -1;
-    }
+    // 创建场景
+    Scene scene;
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Model Loader", nullptr, nullptr);
-    if (!window) {
-        std::cerr << "GLFW window creation failed!" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-    glewInit();
+    // 加载模型（假设路径中有多个.obj文件）
+    scene.loadModelsFromDirectory("assets/models");
 
-    // 设置 OpenGL 状态
-    glEnable(GL_DEPTH_TEST);
+    // 设置相机
+    Camera camera = { glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f };
+    scene.setCamera(camera);
 
-    // 创建模型对象并加载
-    Model model;
-    model.loadModel("assets/models/Mesh000.obj");  // 替换为你的 .obj 文件路径
+    // 添加光源
+    Light light = { glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f };
+    scene.addLight(light);
 
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-        renderLoop(model);
-    }
+    // 渲染场景
+    scene.render();
 
-    glfwTerminate();
     return 0;
 }
