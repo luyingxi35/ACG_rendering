@@ -3,9 +3,12 @@
 
 #include "Model.h"
 #include <vector>
-#include <memory>
 #include <string>
 #include <glm/glm.hpp>
+#include <iostream>
+#include <filesystem>
+#include <memory>
+#include <pugixml.hpp>
 
 // 光源类
 struct Light {
@@ -22,23 +25,31 @@ struct Camera {
     float fov;
 };
 
+// 光线类
+struct Ray {
+    glm::vec3 position;
+    glm::vec3 direction;
+};
+
 class Scene {
 public:
     Scene();
     ~Scene();
 
     void addModel(std::shared_ptr<Model> model);
-    void addLight(const Light& light);
-    void setCamera(const Camera& camera);
+    void extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera);
+    const std::vector<std::shared_ptr<Model>>& getModels() const;
+    const std::vector<Light>& getLights() const;
 
     void loadModelsFromDirectory(const std::string& directory);
 
     void render(); // 模拟渲染过程（仅打印信息）
+    std::vector<Light> lights;
+    Camera camera;
 
 private:
     std::vector<std::shared_ptr<Model>> models;
-    std::vector<Light> lights;
-    Camera camera;
+    
 };
 
 #endif // SCENE_H

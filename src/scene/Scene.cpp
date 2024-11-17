@@ -1,7 +1,4 @@
 #include "Scene.h"
-#include <iostream>
-#include <filesystem>
-#include <memory>
 
 namespace fs = std::filesystem;
 
@@ -15,12 +12,60 @@ void Scene::addModel(std::shared_ptr<Model> model) {
     models.push_back(model);
 }
 
-void Scene::addLight(const Light& light) {
-    lights.push_back(light);
+void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera) {
+    pugi::xml_document doc;
+    if (!doc.load_file(xmlPath.c_str())) {
+        std::cerr << "Failed to load XML scene file: " << xmlPath << std::endl;
+        return;
+    }
+
+    // Extract lights
+    for (pugi::xml_node lightNode : doc.child("scene").children("light")) {
+        Light light;
+        light.position = glm::vec3(
+            lightNode.child("position").attribute("x").as_float(),
+            lightNode.child("position").attribute("y").as_float(),
+            lightNode.child("position").attribute("z").as_float()
+        );
+        light.color = glm::vec3(
+            lightNode.child("color").attribute("r").as_float(),
+            lightNode.child("color").attribute("g").as_float(),
+            lightNode.child("color").attribute("b").as_float()
+        );
+        light.intensity = lightNode.child("intensity").text().as_float();
+        lights.push_back(light);
+    }
+    std::cout << "Finish adding lights." << std::endl;
+    
+    // Extract camera
+    pugi::xml_node cameraNode = doc.child("scene").child("camera");
+    camera.position = glm::vec3(
+        cameraNode.child("position").attribute("x").as_float(),
+        cameraNode.child("position").attribute("y").as_float(),
+        cameraNode.child("position").attribute("z").as_float()
+    );
+    camera.direction = glm::vec3(
+        cameraNode.child("direction").attribute("x").as_float(),
+        cameraNode.child("direction").attribute("y").as_float(),
+        cameraNode.child("direction").attribute("z").as_float()
+    );
+    camera.up = glm::vec3(
+        cameraNode.child("up").attribute("x").as_float(),
+        cameraNode.child("up").attribute("y").as_float(),
+        cameraNode.child("up").attribute("z").as_float()
+    );
+    camera.fov = cameraNode.child("fov").text().as_float();
+
+    std::cout << "Camera loaded: Position(" << camera.position.x << ", " << camera.position.y << ", " << camera.position.z << ")\n";
+
 }
 
-void Scene::setCamera(const Camera& cam) {
-    camera = cam;
+const std::vector<std::shared_ptr<Model>>& Scene::getModels() const {
+    return models;
+}
+
+const std::vector<Light>& Scene::getLights() const {
+    return lights;
 }
 
 void Scene::loadModelsFromDirectory(const std::string& directory) {

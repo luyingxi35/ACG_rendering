@@ -1,53 +1,56 @@
 #include "Model.h"
 #include <iostream>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>  // stb_image 用于加载图片文件
 
 Model::Model() {}
-
-Model::~Model() {
-    // 清理加载的纹理
-    for (GLuint texture : textures) {
-        glDeleteTextures(1, &texture);
-    }
-}
+Model::~Model() {}
 
 void Model::loadModelFromFile(const std::string& path) {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipWindingOrder);
-    if (!scene || !scene->mRootNode) {
-        std::cerr << "Error loading model: " << importer.GetErrorString() << std::endl;
+    const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+        std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
         return;
     }
+
+    // 处理场景节点
     processNode(scene->mRootNode, scene);
+    std::cout << "Loading a model finished." << std::endl;
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene) {
+    // 处理当前节点的所有网格
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        processMesh(mesh, scene);
+        aiMaterial* material = scene->mMaterials[scene->mMeshes[node->mMeshes[i]]->mMaterialIndex];
+        processMesh(mesh, scene, material);
     }
 
+    // 递归处理子节点
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
         processNode(node->mChildren[i], scene);
     }
 }
 
-void Model::processMesh(aiMesh* mesh, const aiScene* scene) {
+void Model::processMesh(aiMesh* mesh, const aiScene* scene, aiMaterial* material) {
     ModelMesh modelMesh;
 
-    // 获取顶点、法线、纹理坐标和索引
+    // 获取顶点数据
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-        aiVector3D pos = mesh->mVertices[i];
-        aiVector3D normal = mesh->mNormals[i];
-        aiVector3D texCoord = mesh->mTextureCoords[0] ? mesh->mTextureCoords[0][i] : aiVector3D(0.0f, 0.0f, 0.0f);
+        glm::vec3 vertex(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+        glm::vec3 normal(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+        glm::vec2 texCoord(0.0f, 0.0f);
 
-        modelMesh.vertices.push_back(glm::vec3(pos.x, pos.y, pos.z));
-        modelMesh.normals.push_back(glm::vec3(normal.x, normal.y, normal.z));
-        modelMesh.texCoords.push_back(glm::vec2(texCoord.x, texCoord.y));
+        if (mesh->mTextureCoords[0]) {
+            texCoord = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+        }
+
+        modelMesh.vertices.push_back(vertex);
+        modelMesh.normals.push_back(normal);
+        modelMesh.texCoords.push_back(texCoord);
     }
 
-    // 获取面（索引）
+    // 获取索引数据
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; j++) {
@@ -55,20 +58,72 @@ void Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         }
     }
 
+    // 处理材质
+    modelMesh.material_ = loadMaterial(material);
+
     meshes.push_back(modelMesh);
+}
 
-    std::cout << "Processed mesh with " << mesh->mNumVertices << " vertices and "
-        << mesh->mNumFaces * 3 << " indices." << std::endl;
+Material Model::loadMaterial(aiMaterial* aiMat) {
+    Material material;
 
-    // 加载材质中的纹理（如果有）
-    if (mesh->mMaterialIndex >= 0) {
-        aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        aiString texturePath;
-        if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
-            GLuint texture = loadTextureFromFile(texturePath.C_Str());
-            textures.push_back(texture);  // 添加到纹理列表
-        }
+    aiColor3D color(0.f, 0.f, 0.f);
+
+    // 获取漫反射颜色
+    if (aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
+        material.diffuseColor = Color(color.r, color.g, color.b);
     }
+    else {
+        std::cout << "No diffuse color found for mesh " << std::endl;
+    }
+
+    // 获取镜面反射颜色
+    if (aiMat->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
+        material.specularColor = Color(color.r, color.g, color.b);
+    }
+    else {
+        std::cout << "No specular color found for mesh " << std::endl;
+    }
+
+    // 获取光泽度
+    float shininess;
+    if (aiMat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
+        material.shineness = shininess;
+    }
+
+    float metallicFactor = 0.0f;
+    float roughnessFactor = 0.0f;
+
+    // Check for metallic factor
+    if (aiMat->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor) != aiReturn_SUCCESS) {
+        metallicFactor = 0.0f; // Default if not found
+    }
+    // Check for roughness factor
+    if (aiMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor) != aiReturn_SUCCESS) {
+        roughnessFactor = 1.0f; // Default if not found
+    }
+    // Logic to determine the material type based on the PBR parameters
+    if (metallicFactor < 0.1f && roughnessFactor > 0.5f) {
+        material.type = 0;
+    }
+    else if (metallicFactor > 0.5f && roughnessFactor < 0.5f) {
+        material.type = 1;
+    }
+    else if (metallicFactor > 0.0f && roughnessFactor > 0.5f) {
+        material.type = 2;
+    }
+    // Default to diffuse if none of the above conditions match
+    material.type = 0;
+
+
+    // 纹理加载（如果有的话）
+    aiString texturePath;
+    if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
+        GLuint texture = loadTextureFromFile(texturePath.C_Str());
+        textures.push_back(texture);
+    }
+
+    return material;
 }
 
 GLuint Model::loadTextureFromFile(const std::string& texturePath) {
@@ -76,32 +131,23 @@ GLuint Model::loadTextureFromFile(const std::string& texturePath) {
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
 
-    // 使用 stb_image 库加载图片文件
+    // 使用STB图片库来加载纹理（你可以替换为其他图片加载库）
     int width, height, nrChannels;
     unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
     if (data) {
-        GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA; // 判断图片通道数
+        GLenum format = (nrChannels == 1) ? GL_RED : (nrChannels == 3) ? GL_RGB : GL_RGBA;
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
     }
     else {
-        std::cerr << "Texture failed to load at path: " << texturePath << std::endl;
-        return -1;
+        std::cerr << "Failed to load texture: " << texturePath << std::endl;
+        stbi_image_free(data);
     }
-    stbi_image_free(data);
 
     return textureID;
 }
 
 void Model::draw() const {
-    std::cout << "Drawing model with " << meshes.size() << " meshes" << std::endl;
-    for (size_t i = 0; i < meshes.size(); ++i) {
-        const ModelMesh& mesh = meshes[i];
-        std::cout << "Mesh " << i + 1 << " with " << mesh.vertices.size() << " vertices and "
-            << mesh.indices.size() << " indices." << std::endl;
-    }
-
-    for (GLuint texture : textures) {
-        std::cout << "Texture ID: " << texture << std::endl;
-    }
+    // 这里可以调试绘制代码，遍历每个网格并使用它的材质绘制
 }

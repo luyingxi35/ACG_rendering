@@ -1,22 +1,27 @@
 #include "scene/Scene.h"
+#include "core/PathTracer.h"
+#include "scene/Model.h"
+#include <iostream>
+#include <vector>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 
 int main() {
-    // 创建场景
     Scene scene;
 
-    // 加载模型（假设路径中有多个.obj文件）
+    scene.extractSceneDataFromXML("assets/scene_v3.xml", scene.lights, scene.camera);
     scene.loadModelsFromDirectory("assets/models");
+    std::cout <<std::endl<< "Finish loading models." << std::endl;
 
-    // 设置相机
-    Camera camera = { glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f };
-    scene.setCamera(camera);
+    
 
-    // 添加光源
-    Light light = { glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(1.0f, 1.0f, 1.0f), 1.0f };
-    scene.addLight(light);
+    // 创建路径追踪器
+    PathTracer pathTracer;
 
-    // 渲染场景
-    scene.render();
+    // 渲染场景并保存为图片
+    pathTracer.render(scene, scene.camera, 1280, 720, 16);  // 渲染 800x600 分辨率的图像
 
+    std::cout << "Rendering complete!" << std::endl;
     return 0;
 }
