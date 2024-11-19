@@ -28,15 +28,15 @@ public:
     ~Model();
 
     void loadModelFromFile(const std::string& path);
-    void draw() const;  // for debugging
     std::vector<ModelMesh> meshes;
     std::vector<GLuint> textures;  // 存储纹理
+    glm::mat4 transformToWorld;
+    Material material;
 
 private:
     GLuint loadTextureFromFile(const std::string& texturePath); // 处理纹理加载
     void processNode(aiNode* node, const aiScene* scene);
     void processMesh(aiMesh* mesh, const aiScene* scene, aiMaterial* material);
-    Material loadMaterial(aiMaterial* material);
 };
 
 #endif // MODEL_H

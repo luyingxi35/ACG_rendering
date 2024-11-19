@@ -11,7 +11,6 @@ int main() {
     Scene scene;
 
     scene.extractSceneDataFromXML("assets/scene_v3.xml", scene.lights, scene.camera);
-    scene.loadModelsFromDirectory("assets/models");
     std::cout <<std::endl<< "Finish loading models." << std::endl;
 
     
@@ -20,7 +19,7 @@ int main() {
     PathTracer pathTracer;
 
     // äÖÈ¾³¡¾°²¢±£´æÎªÍ¼Æ¬
-    pathTracer.render(scene, scene.camera, 1280, 720, 16);  // äÖÈ¾ 800x600 ·Ö±æÂÊµÄÍ¼Ïñ
+    pathTracer.render(scene, scene.camera, 50, 20, 1);  // äÖÈ¾ 800x600 ·Ö±æÂÊµÄÍ¼Ïñ
 
     std::cout << "Rendering complete!" << std::endl;
     return 0;

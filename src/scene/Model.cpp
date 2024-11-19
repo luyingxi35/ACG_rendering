@@ -15,7 +15,7 @@ void Model::loadModelFromFile(const std::string& path) {
 
     // 处理场景节点
     processNode(scene->mRootNode, scene);
-    std::cout << "Loading a model finished." << std::endl;
+    //std::cout << "Loading a model finished." << std::endl;
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene) {
@@ -58,72 +58,7 @@ void Model::processMesh(aiMesh* mesh, const aiScene* scene, aiMaterial* material
         }
     }
 
-    // 处理材质
-    modelMesh.material_ = loadMaterial(material);
-
     meshes.push_back(modelMesh);
-}
-
-Material Model::loadMaterial(aiMaterial* aiMat) {
-    Material material;
-
-    aiColor3D color(0.f, 0.f, 0.f);
-
-    // 获取漫反射颜色
-    if (aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
-        material.diffuseColor = Color(color.r, color.g, color.b);
-    }
-    else {
-        std::cout << "No diffuse color found for mesh " << std::endl;
-    }
-
-    // 获取镜面反射颜色
-    if (aiMat->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
-        material.specularColor = Color(color.r, color.g, color.b);
-    }
-    else {
-        std::cout << "No specular color found for mesh " << std::endl;
-    }
-
-    // 获取光泽度
-    float shininess;
-    if (aiMat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
-        material.shineness = shininess;
-    }
-
-    float metallicFactor = 0.0f;
-    float roughnessFactor = 0.0f;
-
-    // Check for metallic factor
-    if (aiMat->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor) != aiReturn_SUCCESS) {
-        metallicFactor = 0.0f; // Default if not found
-    }
-    // Check for roughness factor
-    if (aiMat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor) != aiReturn_SUCCESS) {
-        roughnessFactor = 1.0f; // Default if not found
-    }
-    // Logic to determine the material type based on the PBR parameters
-    if (metallicFactor < 0.1f && roughnessFactor > 0.5f) {
-        material.type = 0;
-    }
-    else if (metallicFactor > 0.5f && roughnessFactor < 0.5f) {
-        material.type = 1;
-    }
-    else if (metallicFactor > 0.0f && roughnessFactor > 0.5f) {
-        material.type = 2;
-    }
-    // Default to diffuse if none of the above conditions match
-    material.type = 0;
-
-
-    // 纹理加载（如果有的话）
-    aiString texturePath;
-    if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
-        GLuint texture = loadTextureFromFile(texturePath.C_Str());
-        textures.push_back(texture);
-    }
-
-    return material;
 }
 
 GLuint Model::loadTextureFromFile(const std::string& texturePath) {
@@ -148,6 +83,3 @@ GLuint Model::loadTextureFromFile(const std::string& texturePath) {
     return textureID;
 }
 
-void Model::draw() const {
-    // 这里可以调试绘制代码，遍历每个网格并使用它的材质绘制
-}

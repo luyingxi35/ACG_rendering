@@ -8,7 +8,10 @@
 #include <iostream>
 #include <filesystem>
 #include <memory>
+#include <glm/gtc/matrix_transform.hpp>
 #include <pugixml.hpp>
+#include <iostream>
+#include <sstream>
 
 // 光源类
 struct Light {
@@ -20,8 +23,7 @@ struct Light {
 // 相机类
 struct Camera {
     glm::vec3 position;
-    glm::vec3 direction;
-    glm::vec3 up;
+    glm::mat3 rotationMatrix;
     float fov;
 };
 
@@ -39,15 +41,9 @@ public:
     void addModel(std::shared_ptr<Model> model);
     void extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera);
     const std::vector<std::shared_ptr<Model>>& getModels() const;
-    const std::vector<Light>& getLights() const;
 
-    void loadModelsFromDirectory(const std::string& directory);
-
-    void render(); // 模拟渲染过程（仅打印信息）
     std::vector<Light> lights;
     Camera camera;
-
-private:
     std::vector<std::shared_ptr<Model>> models;
     
 };

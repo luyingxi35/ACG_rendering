@@ -97,7 +97,7 @@ bool intersectScene(Ray& ray, const Scene& scene, Intersection& intersection) {
 Color PathTracer::computeDiffuseLighting(Intersection& intersection, const Scene& scene) {
     Color diffuseColor(0.0f, 0.0f, 0.0f);  
 
-    for (const auto& light : scene.getLights()) {
+    for (const auto& light : scene.lights) {
         glm::vec3 lightDir = light.position- intersection.point();  // 光线方向
         float lightDistance = glm::length(lightDir);
         lightDir = glm::normalize(lightDir);
@@ -116,7 +116,7 @@ Color PathTracer::computeSpecularLighting(Intersection& intersection, const Scen
     Color specularColor(0.0f, 0.0f, 0.0f);  // 初始的镜面反射颜色
 
     // 遍历所有光源，计算每个光源对镜面反射的贡献
-    for (const auto& light : scene.getLights()) {
+    for (const auto& light : scene.lights) {
         glm::vec3 lightDir = light.position - intersection.point();  // 光线方向
         float lightDistance = glm::length(lightDir);
         lightDir = glm::normalize(lightDir);
@@ -155,21 +155,18 @@ glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal) {
 
 // 追踪路径
 Color PathTracer::tracePath(Ray ray, const Scene& scene, int bounceCount) {
-    if (bounceCount > MAX_BOUNCES) return Color(0.0f, 0.0f, 0.0f); // 达到反弹次数限制
-
     Color result_color = Color();
     Intersection intersection_scene = Intersection();
     bool intersect_scene = intersectScene(ray, scene, intersection_scene);
     Intersection intersection_light = Intersection();
     Light light_intersect = { glm::vec3(0.0f), glm::vec3(0.0f), 0.0f };
-    std::vector<Light> lights = scene.getLights();
+    std::vector<Light> lights = scene.lights;
     bool intersect_light = intersectLight(ray, lights, light_intersect, intersection_light);
-    if (intersect_scene || intersect_light)
+    /*if (intersect_scene || intersect_light)
         std::cout << "Intersect." << std::endl;
     else {
         std::cout << "No intersection." << std::endl;
-        return Color(0.0f, 0.0f, 0.0f);
-    }
+    }*/
     if ((intersect_light && !intersect_scene) || (intersect_light && intersect_scene && intersection_light.t() < intersection_scene.t())) {
         //light intersection
         glm::vec3 color;
@@ -181,6 +178,8 @@ Color PathTracer::tracePath(Ray ray, const Scene& scene, int bounceCount) {
     if ((intersect_scene && !intersect_light) || (intersect_light && intersect_scene && intersection_scene.t() < intersection_light.t())) {
         //object intersection
         const Material* material_intersect = intersection_scene.material();
+        //std::cout << material_intersect->specularColor.r_ << material_intersect->specularColor.g_ << material_intersect->specularColor.b_ << std::endl;
+        //std::cout << material_intersect->diffuseColor.r_ << material_intersect->diffuseColor.g_ << material_intersect->diffuseColor.b_ << std::endl;
         glm::vec3 position_new = intersection_scene.point();
         Color specular_color = material_intersect->specularColor;
         Color diffuse_color = material_intersect->diffuseColor;
@@ -188,19 +187,28 @@ Color PathTracer::tracePath(Ray ray, const Scene& scene, int bounceCount) {
             glm::vec3 direction_new = ray.direction - 2 * glm::dot(ray.direction, intersection_scene.normal()) * intersection_scene.normal();
             Ray ray_new = { position_new, direction_new };
             int bounceCount_new = bounceCount + 1;
-            result_color = tracePath(ray_new, scene, bounceCount_new);
             std::cout << "Itersect with specular object." << std::endl;
+            if (bounceCount_new > MAX_BOUNCES) {
+                result_color = material_intersect->specularColor;
+                return result_color;
+            }
+            result_color = tracePath(ray_new, scene, bounceCount_new);
             return result_color;
         }
         else  {
             glm::vec3 direction_new = generateRandomDirection(intersection_scene.normal());
             Ray ray_new = { position_new, direction_new };
             int bounceCount_new = bounceCount + 1;
+            //std::cout << "Itersect with diffuse object." << std::endl;
+            if (bounceCount_new > MAX_BOUNCES) {
+                result_color = material_intersect->diffuseColor;
+                return result_color;
+            }
             result_color = tracePath(ray_new, scene, bounceCount_new);
-            std::cout << "Itersect with diffuse object." << std::endl;
             return result_color;
         }
-    }   
+    } 
+    return Color(0.0f, 0.0f, 0.0f);
 }
 
 //generate a sample
@@ -211,11 +219,12 @@ glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int heig
     float u = (2.0f * ((x + distribution(generator)) / static_cast<float>(width)) - 1.0f) * aspect_ratio * scale;
     float v = (1.0f - 2.0f * ((y + distribution(generator)) / static_cast<float>(height))) * scale;
 
-    glm::vec3 forward = glm::normalize(camera.direction);
-    glm::vec3 right = glm::normalize(glm::cross(forward, camera.up));
-    glm::vec3 up = glm::normalize(glm::cross(right, forward));
+    glm::vec3 forward = glm::vec3(0.0, 0.0, -1.0);
+    glm::vec3 right = glm::vec3(1.0, 0.0, 0.0);
+    glm::vec3 up = glm::vec3(0.0, 1.0, 0.0);
 
-    glm::vec3 sample_direction = glm::normalize(forward + u * right + v * up);
+    glm::vec3 sample_direction = glm::normalize(camera.rotationMatrix * (forward + u * right + v * up));
+    sample_direction = camera.rotationMatrix * sample_direction;
     return sample_direction;
 }
 

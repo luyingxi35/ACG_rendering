@@ -3,7 +3,6 @@
 namespace fs = std::filesystem;
 
 Scene::Scene() {
-    camera = { glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f };
 }
 
 Scene::~Scene() {}
@@ -38,67 +37,44 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     std::cout << "Finish adding lights." << std::endl;
     
     // Extract camera
-    pugi::xml_node cameraNode = doc.child("scene").child("camera");
-    camera.position = glm::vec3(
-        cameraNode.child("position").attribute("x").as_float(),
-        cameraNode.child("position").attribute("y").as_float(),
-        cameraNode.child("position").attribute("z").as_float()
-    );
-    camera.direction = glm::vec3(
-        cameraNode.child("direction").attribute("x").as_float(),
-        cameraNode.child("direction").attribute("y").as_float(),
-        cameraNode.child("direction").attribute("z").as_float()
-    );
-    camera.up = glm::vec3(
-        cameraNode.child("up").attribute("x").as_float(),
-        cameraNode.child("up").attribute("y").as_float(),
-        cameraNode.child("up").attribute("z").as_float()
-    );
-    camera.fov = cameraNode.child("fov").text().as_float();
+    pugi::xml_node cameraNode = doc.child("scene").child("sensor");
+    camera.fov = cameraNode.child("float").attribute("value").as_float();
+    
+    camera.rotationMatrix = { {-0.993341, -0.0130485, -0.114467}, {0, 0.993565, -0.11326}, {0.115208, -0.112506, -0.98695}};
+    camera.position = glm::vec3(4.44315, 16.934, 49.9102);
 
     std::cout << "Camera loaded: Position(" << camera.position.x << ", " << camera.position.y << ", " << camera.position.z << ")\n";
 
+    // Extraxt models
+    for (auto shapeNode : doc.child("scene").children("shape")) {
+        if (std::string(shapeNode.attribute("type").value()) == "obj") {
+            std::string path = shapeNode.child("string").attribute("value").as_string();
+            std::string filepath = "assets/";
+            filepath.append(path);
+            std::cout << filepath << std::endl;
+            auto model = std::make_shared<Model>();
+            model->loadModelFromFile(filepath);
+
+
+            // Load transformToWorld
+            glm::mat4 transform;
+            auto matrixNode = shapeNode.child("transform").child("matrix");
+            std::string matrixValue = matrixNode.attribute("value").as_string();
+            std::cout << matrixValue << std::endl;
+            sscanf_s(matrixValue.c_str(), "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+                &transform[0][0], &transform[0][1], &transform[0][2], &transform[0][3],
+                &transform[1][0], &transform[1][1], &transform[1][2], &transform[1][3],
+                &transform[2][0], &transform[2][1], &transform[2][2], &transform[2][3],
+                &transform[3][0], &transform[3][1], &transform[3][2], &transform[3][3]);
+            model->transformToWorld = transform;
+
+            addModel(model);
+        }
+    }
 }
 
 const std::vector<std::shared_ptr<Model>>& Scene::getModels() const {
     return models;
 }
 
-const std::vector<Light>& Scene::getLights() const {
-    return lights;
-}
 
-void Scene::loadModelsFromDirectory(const std::string& directory) {
-    for (const auto& entry : fs::directory_iterator(directory)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".obj") {
-            auto model = std::make_shared<Model>();
-            model->loadModelFromFile(entry.path().string());
-            addModel(model);
-        }
-    }
-}
-
-void Scene::render() {
-    std::cout << "Rendering scene with " << models.size() << " models and " << lights.size() << " lights." << std::endl;
-    for (const auto& model : models) {
-        model->draw();
-    }
-    for (const auto& light : lights) {
-        std::cout << "Light at position: ("
-            << light.position.x << ", "
-            << light.position.y << ", "
-            << light.position.z << ") with color: ("
-            << light.color.x << ", "
-            << light.color.y << ", "
-            << light.color.z << ") and intensity: "
-            << light.intensity << std::endl;
-    }
-    std::cout << "Camera position: ("
-        << camera.position.x << ", "
-        << camera.position.y << ", "
-        << camera.position.z << ") looking towards: ("
-        << camera.direction.x << ", "
-        << camera.direction.y << ", "
-        << camera.direction.z << ") with FOV: "
-        << camera.fov << std::endl;
-}
