@@ -349,7 +349,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             result_color += tracePath(refractRay, scene, bvh, bounceCount_new);
         }
     } 
-    return glm::vec3(0.0f, 0.0f, 0.0f);
+    return result_color;
 }
 
 //generate a sample

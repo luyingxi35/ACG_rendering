@@ -12,6 +12,7 @@ public:
     ~Scene();
 
     void addModel(std::shared_ptr<Model> model);
+    Material extractMaterialFromBSDF(pugi::xml_node bsdf);
     void extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera);
 
     std::vector<Light> lights;
