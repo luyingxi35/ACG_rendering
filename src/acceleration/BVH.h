@@ -13,12 +13,12 @@ struct AABB {
             float t0 = (min[i] - ray.position[i]) * invD;
             float t1 = (max[i] - ray.position[i]) * invD;
             if (invD < 0.0) std::swap(t0, t1);
-            std::cout << "t0: " << t0 << std::endl;
-            std::cout << "t1: " << t1 << std::endl;
+            //std::cout << "t0: " << t0 << std::endl;
+            //std::cout << "t1: " << t1 << std::endl;
             tMin = std::max(tMin, t0);
             tMax = std::min(tMax, t1);
-            std::cout << "tMin: " << tMin << std::endl;
-            std::cout << "tMax: " << tMax << std::endl;
+            //std::cout << "tMin: " << tMin << std::endl;
+            //std::cout << "tMax: " << tMax << std::endl;
             if (tMax <= tMin) return false;
         }
         return true;

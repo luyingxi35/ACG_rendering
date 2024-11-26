@@ -68,15 +68,15 @@ AABB BVH::computeBounds(std::vector<std::shared_ptr<Model>>& models) {
 	return bounds;
 }
 bool BVH::intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t) {
-	std::cout << t;
+	//std::cout << t;
 	float tMin = 0.0;
 	float tMax = 1e6;
 	if (!node || !node->bounds.intersect(ray, tMin, tMax)) {
-		std::cout << "Not itersect with bounds." << std::endl;
+		//std::cout << "Not itersect with bounds." << std::endl;
 		return false;
 	}
 	if (node->isLeaf()) {
-		std::cout << "Leaf: ";
+		//std::cout << "Leaf: ";
 		bool hit = false;
 		for (auto& model : node->models) {
 			for (auto& triangle : model->triangles) {
