@@ -1,9 +1,6 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include <string>
-#include <vector>
-#include <glm/glm.hpp>
 #include <GL/glew.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -12,6 +9,7 @@
 #include <assimp/texture.h>
 #include "../core/Material.h"
 #include "../core/Color.h"
+#include "../utils/definition.h"
 #include "stb_image.h"
 
 struct ModelMesh {
@@ -30,6 +28,7 @@ public:
     void loadModelFromFile(const std::string& path);
     std::vector<ModelMesh> meshes;
     std::vector<GLuint> textures;  // ¥Ê¥¢Œ∆¿Ì
+    std::vector<Triangle> triangles;
     glm::mat4 transformToWorld;
     Material material;
 

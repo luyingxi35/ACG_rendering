@@ -27,72 +27,6 @@ bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& resu
     return hit;
 }
 
-bool rayIntersectsTriangle(const Ray& ray, const Triangle& triangle, float& t, glm::vec3& normal) {
-    glm::vec3 rayOrigin = ray.position;
-    glm::vec3 rayDir = glm::normalize(ray.direction);
-    glm::vec3 e1 = triangle.v1 - triangle.v0;
-    glm::vec3 e2= triangle.v2 - triangle.v0;
-    glm::vec3 n = glm::normalize( glm::cross(e1,e2) );
-    
-    float denominator = glm::dot(rayDir, n);
-    if (denominator > -EPSILON && denominator < EPSILON)
-        return false;
-
-    float criteria = dot(triangle.v0 - rayOrigin, n) / denominator;
-    if (criteria < 0.0)
-        return false;
-    
-    glm::vec3 s = rayOrigin - triangle.v0;
-    glm::vec3 s1 = glm::cross(rayDir, e2);
-    glm::vec3 s2 = glm::cross(s, e1);
-
-    float invDenom = 1.0 / glm::dot(s1, e1);
-    float b1 = dot(s1, s) * invDenom;
-    float b2 = dot(s2, rayDir) * invDenom;
-    t = dot(s2, e2) * invDenom;
-
-    if (t > 1e-6 && b1 >= 0.0 && b2 >= 0.0 && b1 + b2 <= 1.0) {
-        glm::vec3 position = rayOrigin + criteria * rayDir;
-        normal = n;
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-bool intersectScene(Ray& ray, const Scene& scene, Intersection& intersection) {
-	bool hit = false;
-	float closestHit = std::numeric_limits<float>::max();
-	for (const auto& model : scene.getModels()) {
-		for (auto& mesh : model->meshes) {
-            for (size_t i = 0; i < mesh.indices.size() / 3; ++i) {
-                glm::vec3& v0 = mesh.vertices[mesh.indices[i * 3]];
-                glm::vec3& v1 = mesh.vertices[mesh.indices[i * 3 + 1]];
-                glm::vec3& v2 = mesh.vertices[mesh.indices[i * 3 + 2]];
-
-
-                Triangle triangle(v0, v1, v2);
-
-                float t = 0.0f;
-                glm::vec3 point = glm::vec3(0.0f);
-                glm::vec3 normal = glm::vec3(0.0f);
-
-                if (rayIntersectsTriangle(ray, triangle, t, normal) && t < closestHit) {
-                    hit = true;
-                    closestHit = t;
-                    point = ray.position + t * ray.direction;
-                    Material* p = &mesh.material_;
-
-                    // 更新相交信息
-                    intersection.set(t, point, normal, p);
-                }
-            }
-		}
-	}
-	return hit;
-}
-
 // 漫反射光照
 Color PathTracer::computeDiffuseLighting(Intersection& intersection, const Scene& scene) {
     Color diffuseColor(0.0f, 0.0f, 0.0f);  
@@ -154,19 +88,20 @@ glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal) {
 
 
 // 追踪路径
-Color PathTracer::tracePath(Ray ray, const Scene& scene, int bounceCount) {
+Color PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount) {
     Color result_color = Color();
     Intersection intersection_scene = Intersection();
-    bool intersect_scene = intersectScene(ray, scene, intersection_scene);
+    float t = 1e6;
+    bool intersect_scene = bvh.intersect(ray, intersection_scene, t);
     Intersection intersection_light = Intersection();
     Light light_intersect = { glm::vec3(0.0f), glm::vec3(0.0f), 0.0f };
     std::vector<Light> lights = scene.lights;
     bool intersect_light = intersectLight(ray, lights, light_intersect, intersection_light);
-    /*if (intersect_scene || intersect_light)
+    if (intersect_scene || intersect_light)
         std::cout << "Intersect." << std::endl;
     else {
         std::cout << "No intersection." << std::endl;
-    }*/
+    }
     if ((intersect_light && !intersect_scene) || (intersect_light && intersect_scene && intersection_light.t() < intersection_scene.t())) {
         //light intersection
         glm::vec3 color;
@@ -192,19 +127,19 @@ Color PathTracer::tracePath(Ray ray, const Scene& scene, int bounceCount) {
                 result_color = material_intersect->specularColor;
                 return result_color;
             }
-            result_color = tracePath(ray_new, scene, bounceCount_new);
+            result_color = tracePath(ray_new, scene, bvh, bounceCount_new);
             return result_color;
         }
         else  {
             glm::vec3 direction_new = generateRandomDirection(intersection_scene.normal());
             Ray ray_new = { position_new, direction_new };
             int bounceCount_new = bounceCount + 1;
-            //std::cout << "Itersect with diffuse object." << std::endl;
+            std::cout << "Itersect with diffuse object." << std::endl;
             if (bounceCount_new > MAX_BOUNCES) {
                 result_color = material_intersect->diffuseColor;
                 return result_color;
             }
-            result_color = tracePath(ray_new, scene, bounceCount_new);
+            result_color = tracePath(ray_new, scene, bvh, bounceCount_new);
             return result_color;
         }
     } 
@@ -229,7 +164,7 @@ glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int heig
 }
 
 // 主路径追踪函数
-void PathTracer::render(const Scene& scene, const Camera& camera, int width, int height, int samplesPerPixel) {
+void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel) {
     std::vector<Color> framebuffer(width * height, Color(0.0f, 0.0f, 0.0f));
     glm::vec3 camPos = camera.position;
 
@@ -239,12 +174,14 @@ void PathTracer::render(const Scene& scene, const Camera& camera, int width, int
 
             for (int i = 0; i < samplesPerPixel; ++i) {
                 glm::vec3 sample_position = generateSample(camera, x, y, width, height); // 调用完成的生成样本位置函数
+                std::cout << "sample_position: " << sample_position[0] << " " << sample_position[1] << " " << sample_position[2] << std::endl;
                 Ray ray = { camPos, sample_position};
-                Color color_mid = tracePath(ray, scene, 0);
+                Color color_mid = tracePath(ray, scene, bvh, 0);
                 pixel_radiance = pixel_radiance + color_mid * (1.0f / (float)samplesPerPixel);
             }
 
             framebuffer[y * width + x] = pixel_radiance;
+            std::cout << "Color: " << pixel_radiance.r() << " " << pixel_radiance.g() << " " << pixel_radiance.b() << std::endl;
             std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
         }
     }
