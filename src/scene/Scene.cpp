@@ -42,18 +42,25 @@ glm::vec3 extractRGB(pugi::xml_node bsdf, const std::string& name) {
 
 Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
     Material material;
+    // 初始目标节点为当前 bsdf 节点
+    pugi::xml_node target_bsdf = bsdf;
 
     std::string type = bsdf.attribute("type").as_string();
     if (type == "twosided") {
         material.twoSided = true;
+        target_bsdf = bsdf.child("bsdf");  // 指向子 BSDF 节点
+        if (!target_bsdf) {
+            std::cerr << "twosided BSDF 节点缺少子 bsdf 节点。" << std::endl;
+            return material;
+        }
         type = bsdf.child("bsdf").attribute("type").as_string();
     }
 
     if (type == "roughdielectric") {
         material.type = MaterialType::RoughDielectric;
-        material.alpha = extractFloat(bsdf, "alpha");
-        material.int_ior = extractFloat(bsdf, "int_ior");
-        material.ext_ior = extractFloat(bsdf, "ext_ior");
+        material.alpha = extractFloat(target_bsdf, "alpha");
+        material.int_ior = extractFloat(target_bsdf, "int_ior");
+        material.ext_ior = extractFloat(target_bsdf, "ext_ior");
     }
     else if (type == "conductor") {
         material.type = MaterialType::Conductor;
@@ -61,8 +68,8 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
     }
     else if (type == "roughconductor") {
         material.type = MaterialType::RoughConductor;
-        material.alpha = extractFloat(bsdf, "alpha");
-        for (auto rgbNode : bsdf.children("rgb")) {
+        material.alpha = extractFloat(target_bsdf, "alpha");
+        for (auto rgbNode : target_bsdf.children("rgb")) {
             std::string name = rgbNode.attribute("name").as_string();
             glm::vec3 color = extractColor(rgbNode.attribute("value").as_string());
 
@@ -80,17 +87,17 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
     else if (type == "plastic" || type == "roughplastic") {
         material.type = (type == "plastic") ? MaterialType::Plastic : MaterialType::RoughPlastic;
         if (type == "roughplastic") {
-            material.alpha = extractFloat(bsdf, "alpha");
+            material.alpha = extractFloat(target_bsdf, "alpha");
         }
-        material.int_ior = extractFloat(bsdf, "int_ior");
-        material.ext_ior = extractFloat(bsdf, "ext_ior");
+        material.int_ior = extractFloat(target_bsdf, "int_ior");
+        material.ext_ior = extractFloat(target_bsdf, "ext_ior");
         material.nonlinear = true;
-        material.diffuseReflect = extractRGB(bsdf, "diffuse_reflectance");
+        material.diffuseReflect = extractRGB(target_bsdf, "diffuse_reflectance");
 
     }
     else if (type == "diffuse") {
         material.type = MaterialType::Diffuse;
-        auto reflectance = bsdf.child("rgb");
+        auto reflectance = target_bsdf.child("rgb");
         if (reflectance) {
             material.diffuseReflect = extractColor(reflectance.attribute("value").as_string());
         }
@@ -101,6 +108,19 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
 
     return material;
 }
+
+// for debug
+//inline const char* materialTypeToString(MaterialType type) {
+//    switch (type) {
+//    case MaterialType::Diffuse: return "Diffuse";
+//    case MaterialType::Plastic: return "Plastic";
+//    case MaterialType::Conductor: return "Conductor";
+//    case MaterialType::RoughDielectric: return "RoughDielectric";
+//    case MaterialType::RoughConductor: return "RoughConductor";
+//    case MaterialType::RoughPlastic: return "RoughPlastic";
+//    default: return "Unknown";
+//    }
+//}
 
 void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera) {
     pugi::xml_document doc;
@@ -177,12 +197,17 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // Load material
             auto materialRef = shapeNode.child("ref");
             auto id = materialRef.attribute("id").as_string();
-            for (auto bsdf : doc.child("scene").children("bsdf")) {
-                if (bsdf.attribute("id").as_string() == id) {
-                    model->material = extractMaterialFromBSDF(bsdf);
-                    break;
-                }
+            pugi::xml_node bsdf = doc.child("scene").find_child_by_attribute("bsdf", "id", id);
+            if (bsdf) {
+                model->material = extractMaterialFromBSDF(bsdf);
             }
+            else {
+                std::cerr << "未找到 id 为 " << id << " 的 bsdf 节点。" << std::endl;
+            }
+            //std::cout << "Extracting BSDF Type: " << materialTypeToString(model->material.type) << std::endl;
+            //// 在提取每个属性后添加输出
+            //std::cout << "alpha: " << model->material.alpha << "specular_rate: " << model->material.specularReflect.x << ", eta: " << model->material.eta.x << ", " << model->material.eta.y << ", " << model->material.eta.z << ", int_ior: " << model->material.int_ior
+            //    << ", ext_ior: " << model->material.ext_ior << std::endl;
 
             addModel(model);
         }
