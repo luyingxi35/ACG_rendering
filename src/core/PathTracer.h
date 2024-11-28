@@ -18,6 +18,7 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <cmath>
 
 class PathTracer {
 public:

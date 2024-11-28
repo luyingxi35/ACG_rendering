@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 8;
+const int MAX_BOUNCES = 16;
 
 //point light
 /*bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& result_light, Intersection& intersection) {
@@ -117,8 +117,8 @@ float GGX_G(const glm::vec3& l, const glm::vec3& v, const glm::vec3& n, const gl
     float lh = glm::dot(l, h);
     float vh = glm::dot(v, h);
 
-    float ggx1 = 2.0f * nl * lh / lh;
-    float ggx2 = 2.0f * nv * vh / vh;
+    float ggx1 = 2.0f * nl * lh / (lh + vh);
+    float ggx2 = 2.0f * nv * vh / (vh + lh);
 
     return std::min(1.0f, std::min(ggx1, ggx2));
 }
@@ -565,12 +565,13 @@ glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int heig
     float u = (2.0f * ((x + dis(gen)) / static_cast<float>(width)) - 1.0f) * aspect_ratio * scale;
     float v = (1.0f - 2.0f * ((y + dis(gen)) / static_cast<float>(height))) * scale;
 
-    glm::vec3 forward = glm::vec3(0.0, 0.0, -1.0);
+    glm::vec3 forward = glm::vec3(0.0, 0.0, 1.0);
     glm::vec3 right = glm::vec3(1.0, 0.0, 0.0);
     glm::vec3 up = glm::vec3(0.0, 1.0, 0.0);
 
-    glm::vec3 sample_direction = glm::normalize(camera.rotationMatrix * (forward + u * right + v * up));
-    return glm::normalize(camera.rotationMatrix * sample_direction);
+    glm::vec3 sample_direction = glm::normalize(glm::transpose(camera.rotationMatrix) * (forward + u * right + v * up));
+    //std::cout << "Sample direction: " << sample_direction[0] << " " << sample_direction[1] << " " << sample_direction[2] << std::endl;
+    return sample_direction;
 }
 
 // 渲染图像的一部分，无需互斥锁，因为每个线程处理独立的像素区域
@@ -648,6 +649,7 @@ void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
     outFile << "P3\n" << width << " " << height << "\n255\n";
     for (auto& color : framebuffer) {
         // 进行伽马校正或其他颜色空间转换（可选）
+        color = glm::pow(color, glm::vec3(1.0f / 2.2f));
         glm::vec3 clamped = glm::clamp(color, 0.0f, 1.0f);
         outFile << static_cast<int>(clamped.r * 255.0f) << " "
             << static_cast<int>(clamped.g * 255.0f) << " "
