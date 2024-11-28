@@ -17,8 +17,8 @@ int main() {
     PathTracer pathTracer;
     BVH bvh(scene);
 
-    // 渲染场景并保存为图片
-    pathTracer.render(scene, scene.camera, bvh, 1200, 780, 32);  // 渲染 800x600 分辨率的图像
+    // rendering the scene and output the picture
+    pathTracer.render(scene, scene.camera, bvh, 120, 78, 16);  
 
     std::cout << "Rendering complete!" << std::endl;
     return 0;

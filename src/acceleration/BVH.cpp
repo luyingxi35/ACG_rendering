@@ -33,19 +33,21 @@ BVHNode* BVH::build(std::vector<std::shared_ptr<Model>> models, int depth) {
 
 	BVHNode* node = new BVHNode();
 	node->bounds = computeBounds(models);
-	std::cout << "Model min bound: " << node->bounds.min[0] << " " << node->bounds.min[1] << " " << node->bounds.min[2] << std::endl;
-	std::cout << "Model max bound: " << node->bounds.max[0] << " " << node->bounds.max[1] << " " << node->bounds.max[2] << std::endl;
+	//std::cout << "Model min bound: " << node->bounds.min[0] << " " << node->bounds.min[1] << " " << node->bounds.min[2] << std::endl;
+	//std::cout << "Model max bound: " << node->bounds.max[0] << " " << node->bounds.max[1] << " " << node->bounds.max[2] << std::endl;
 
 
 	if (depth > 16 || models.size() <= 2) {
-		std::cout << "Too depth or too small." << std::endl;
+		//std::cout << "Too depth or too small." << std::endl;
 		node->models = std::move(models);
 		return node;
 	}
 	int axis = depth % 3;
 	std::sort(models.begin(), models.end(),
-		[axis](std::shared_ptr<Model>& a, std::shared_ptr<Model>& b) {
-			return computeModelBounds(a).min[axis] < computeModelBounds(b).min[axis];
+		[axis](const std::shared_ptr<Model>& a, const std::shared_ptr<Model>& b) -> bool {
+			glm::vec3 aCentroid = (computeModelBounds(a).min + computeModelBounds(a).max) * 0.5f;
+			glm::vec3 bCentroid = (computeModelBounds(b).min + computeModelBounds(b).max) * 0.5f;
+			return aCentroid[axis] < bCentroid[axis];
 		});
 
 	size_t mid = models.size() / 2;
@@ -54,7 +56,7 @@ BVHNode* BVH::build(std::vector<std::shared_ptr<Model>> models, int depth) {
 
 	node->left = build(leftModels, depth + 1);
 	node->right = build(rightModels, depth + 1);
-	std::cout << "depth: " << depth << std::endl;
+	//std::cout << "depth: " << depth << std::endl;
 
 	return node;
 }
@@ -70,7 +72,7 @@ AABB BVH::computeBounds(std::vector<std::shared_ptr<Model>>& models) {
 bool BVH::intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t) {
 	//std::cout << t;
 	float tMin = 0.0;
-	float tMax = 1e6;
+	float tMax = t;
 	if (!node || !node->bounds.intersect(ray, tMin, tMax)) {
 		//std::cout << "Not itersect with bounds." << std::endl;
 		return false;
@@ -82,7 +84,7 @@ bool BVH::intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, flo
 			for (auto& triangle : model->triangles) {
 				float tTri = 1e7;
 				glm::vec3 normal = { 0.0,0.0,0.0 };
-				if (triangle.intersect(ray, tTri, normal) && tTri < t) {
+				if (triangle.intersect(ray, tTri, normal) && tTri > tMin && tTri < t) {
 					t = tTri;
 					hit = true;
 					intersection.set(t, ray.position + t * ray.direction, normal, &model->material);

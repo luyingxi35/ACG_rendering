@@ -25,6 +25,7 @@ public:
 		this->eta = glm::vec3(0.0f);
 		this->k = glm::vec3(0.0f);
 		this->nonlinear = false;
+		this->emission = glm::vec3(0.0f);
 	};
 	~Material() {};
 	MaterialType type;
@@ -37,6 +38,7 @@ public:
 	glm::vec3 eta;  //for conductor
 	glm::vec3 k;  //for conductor
 	bool nonlinear;  //是否非线性
+	glm::vec3 emission;  // 发光颜色
 };
 
 #endif // !MATERIAL_H

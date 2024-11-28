@@ -211,6 +211,85 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
             addModel(model);
         }
+
+        // handle rectangle
+        else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
+            auto model = std::make_shared<Model>();
+
+            // extract material
+            pugi::xml_node bsdfNode = shapeNode.child("bsdf");
+            if (bsdfNode) {
+                Material material = extractMaterialFromBSDF(bsdfNode);
+                model->material = material;
+            }
+            else {
+                std::cerr << "Did not fine BSDF Node for rectangle." << std::endl;
+                continue;
+            }
+
+            // 加载变换矩阵
+            pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
+            std::string matrixValueRect = matrixNode.attribute("value").as_string();
+            glm::mat4 transformRect;
+            sscanf_s(matrixValueRect.c_str(), "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+                &transformRect[0][0], &transformRect[0][1], &transformRect[0][2], &transformRect[0][3],
+                &transformRect[1][0], &transformRect[1][1], &transformRect[1][2], &transformRect[1][3],
+                &transformRect[2][0], &transformRect[2][1], &transformRect[2][2], &transformRect[2][3],
+                &transformRect[3][0], &transformRect[3][1], &transformRect[3][2], &transformRect[3][3]);
+            model->transformToWorld = transformRect;
+
+            // 定义单位矩形中心为 (0.5, 0.5, 0.0)，应用变换矩阵得到实际中心
+            glm::vec4 unitCenter = transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f);
+            glm::vec3 center = glm::vec3(unitCenter) / unitCenter.w;
+
+            // 检查是否有发光体（emitter）
+            pugi::xml_node emitterNodeRect = shapeNode.child("emitter");
+            if (emitterNodeRect) {
+                std::string emitterType = emitterNodeRect.attribute("type").as_string();
+                if (emitterType == "area") {
+                    glm::vec3 radiance = extractColor(emitterNodeRect.child("rgb").attribute("value").as_string());
+                    model->material.emission = radiance;
+                    // 计算形状的中心位置
+                    glm::vec3 center = glm::vec3(transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f));
+
+                    // 创建并添加光源
+                    Light light;
+                    light.position = center;
+                    light.color = radiance;
+                    light.intensity = 1.0f; // 根据需要调整强度
+                    lights.push_back(light);
+
+                    std::cout << "Added Area Light at (" << center.x << ", " << center.y << ", " << center.z << ") with Radiance ("
+                        << radiance.x << ", " << radiance.y << ", " << radiance.z << ")" << std::endl;
+                }
+                // 处理其他类型的 emitter 如果有的话
+            }
+
+            // 定义单位矩形的四个顶点
+            glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
+            glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 0.0f);
+            glm::vec3 v2 = glm::vec3(1.0f, 1.0f, 0.0f);
+            glm::vec3 v3 = glm::vec3(0.0f, 1.0f, 0.0f);
+
+            // 应用变换矩阵
+            glm::vec4 transformed_v0 = transformRect * glm::vec4(v0, 1.0f);
+            glm::vec4 transformed_v1 = transformRect * glm::vec4(v1, 1.0f);
+            glm::vec4 transformed_v2 = transformRect * glm::vec4(v2, 1.0f);
+            glm::vec4 transformed_v3 = transformRect * glm::vec4(v3, 1.0f);
+            v0 = glm::vec3(transformed_v0);
+            v1 = glm::vec3(transformed_v1);
+            v2 = glm::vec3(transformed_v2);
+            v3 = glm::vec3(transformed_v3);
+
+            // 两个三角形组成一个矩形
+            Triangle tri1 = Triangle(v0, v1, v2);
+            Triangle tri2 = Triangle(v0, v2, v3);
+
+            model->triangles.push_back(tri1);
+            model->triangles.push_back(tri2);
+
+            addModel(model);
+        }
     }
 }
 
