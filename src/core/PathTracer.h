@@ -7,6 +7,7 @@
 #include <fstream>
 #include <filesystem>
 #include <memory>
+#include <glm/glm.hpp>
 #include "../scene/Scene.h"
 #include "Material.h"
 #include "Color.h"
@@ -14,11 +15,19 @@
 #include "stb_image_write.h"
 #include "../acceleration/BVH.h"
 #include "../utils/definition.h"
+#include <thread>
+#include <vector>
+#include <mutex>
 
 class PathTracer {
 public:
-	void render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel);
+	void render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel, int numThreads);
 	glm::vec3 tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount);
+	void renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
+		int width, int height, int samplesPerPixel,
+		int xStart, int xEnd,
+		std::vector<glm::vec3>& framebuffer,
+		std::mutex& fbMutex);
 
 private:
 	glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene);

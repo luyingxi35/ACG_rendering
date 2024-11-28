@@ -376,47 +376,73 @@ glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int heig
     return sample_direction;
 }
 
-// 主路径追踪函数
-void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel) {
-    std::vector < glm::vec3 > framebuffer(width * height, glm::vec3(0.0f, 0.0f, 0.0f));
-    glm::vec3 camPos = camera.position;
-
-    // 调试输出光源信息
-    std::cout << "Number of lights: " << scene.lights.size() << std::endl;
-    for (const auto& light : scene.lights) {
-        std::cout << "Light Position: (" << light.position.x << ", " << light.position.y << ", " << light.position.z << "), "
-            << "Color: (" << light.color.x << ", " << light.color.y << ", " << light.color.z << "), "
-            << "Intensity: " << light.intensity << std::endl;
-    }
-
+void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
+    int width, int height, int samplesPerPixel,
+    int xStart, int xEnd,
+    std::vector<glm::vec3>& framebuffer,
+    std::mutex& fbMutex) {
+    std::mt19937 gen(std::random_device{}());
+    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
 
     for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
+        for (int x = xStart; x < xEnd; ++x) {
             glm::vec3 pixel_radiance(0.0f, 0.0f, 0.0f);
 
             for (int i = 0; i < samplesPerPixel; ++i) {
-                glm::vec3 sample_position = generateSample(camera, x, y, width, height); // 调用完成的生成样本位置函数
-                //std::cout << "sample_position: " << sample_position[0] << " " << sample_position[1] << " " << sample_position[2] << std::endl;
-                Ray ray = { camPos, sample_position};
+                glm::vec3 sample_direction = generateSample(camera, x, y, width, height);
+                Ray ray = { camera.position, sample_direction };
                 glm::vec3 color_mid = tracePath(ray, scene, bvh, 0);
-                pixel_radiance = pixel_radiance + color_mid * (1.0f / (float)samplesPerPixel);
+                pixel_radiance += color_mid * (1.0f / static_cast<float>(samplesPerPixel));
             }
-
-            framebuffer[y * width + x] = pixel_radiance;
+            std::cout << "Finish rendering pixel (" << x << ", " << y << ")" << std::endl;
             std::cout << "Color: " << pixel_radiance[0] << " " << pixel_radiance[1] << " " << pixel_radiance[2] << std::endl;
-            std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
+
+            // 线程安全地更新帧缓冲
+            {
+                std::lock_guard<std::mutex> lock(fbMutex);
+                framebuffer[y * width + x] += pixel_radiance;
+            }
         }
     }
+}
 
-    // 输出图像到文件（如.ppm格式）
+// 主路径追踪函数
+void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
+    int width, int height, int samplesPerPixel,
+    int numThreads) {
+    std::vector<glm::vec3> framebuffer(width * height, glm::vec3(0.0f));
+    std::vector<std::thread> threadPool;
+    std::mutex fbMutex;
+
+    // 计算每个线程处理的像素列范围
+    int colsPerThread = width / numThreads;
+    int remainingCols = width % numThreads;
+
+    for (int t = 0; t < numThreads; ++t) {
+        int xStart = t * colsPerThread;
+        int xEnd = (t == numThreads - 1) ? (xStart + colsPerThread + remainingCols) : (xStart + colsPerThread);
+        threadPool.emplace_back(&PathTracer::renderSection, this, std::ref(scene), std::ref(camera), std::ref(bvh),
+            width, height, samplesPerPixel,
+            xStart, xEnd,
+            std::ref(framebuffer),
+            std::ref(fbMutex));
+    }
+
+    // 等待所有线程完成
+    for (auto& thread : threadPool)
+        thread.join();
+
+    // 输出调试信息
+    // 可以在这里添加代码将 framebuffer 保存为图像文件
+    // 例如使用像您之前的代码中的输出逻辑
     std::ofstream outFile("output.ppm");
     outFile << "P3\n" << width << " " << height << "\n255\n";
     for (auto& color : framebuffer) {
-        outFile << static_cast<int>(std::clamp(color[0] * 255.0f, 0.0f, 255.0f)) << " ";
-        outFile << static_cast<int>(std::clamp(color[1] * 255.0f, 0.0f, 255.0f)) << " ";
-        outFile << static_cast<int>(std::clamp(color[2] * 255.0f, 0.0f, 255.0f)) << "\n";
+        outFile << static_cast<int>(std::clamp(color.r * 255.0f, 0.0f, 255.0f)) << " ";
+        outFile << static_cast<int>(std::clamp(color.g * 255.0f, 0.0f, 255.0f)) << " ";
+        outFile << static_cast<int>(std::clamp(color.b * 255.0f, 0.0f, 255.0f)) << "\n";
     }
     outFile.close();
 
-    std::cout << "Rendering complete. Image saved to output.ppm" << std::endl;
+    std::cout << "Rendering complete. Image saved to output.ppm." << std::endl;
 }
