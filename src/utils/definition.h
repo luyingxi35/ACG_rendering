@@ -21,8 +21,11 @@
 // 光源类
 struct Light {
     glm::vec3 position;
+    glm::vec3 u;
+    glm::vec3 v;
     glm::vec3 color;
     float intensity;
+    int samples;             // 每个面光源的采样数量，用于软阴影
 };
 
 // 相机类

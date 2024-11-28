@@ -242,29 +242,6 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             glm::vec4 unitCenter = transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f);
             glm::vec3 center = glm::vec3(unitCenter) / unitCenter.w;
 
-            // 检查是否有发光体（emitter）
-            pugi::xml_node emitterNodeRect = shapeNode.child("emitter");
-            if (emitterNodeRect) {
-                std::string emitterType = emitterNodeRect.attribute("type").as_string();
-                if (emitterType == "area") {
-                    glm::vec3 radiance = extractColor(emitterNodeRect.child("rgb").attribute("value").as_string());
-                    model->material.emission = radiance;
-                    // 计算形状的中心位置
-                    glm::vec3 center = glm::vec3(transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f));
-
-                    // 创建并添加光源
-                    Light light;
-                    light.position = center;
-                    light.color = radiance;
-                    light.intensity = 1.0f; // 根据需要调整强度
-                    lights.push_back(light);
-
-                    std::cout << "Added Area Light at (" << center.x << ", " << center.y << ", " << center.z << ") with Radiance ("
-                        << radiance.x << ", " << radiance.y << ", " << radiance.z << ")" << std::endl;
-                }
-                // 处理其他类型的 emitter 如果有的话
-            }
-
             // 定义单位矩形的四个顶点
             glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
             glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -287,6 +264,32 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
             model->triangles.push_back(tri1);
             model->triangles.push_back(tri2);
+
+            // 检查是否有发光体（emitter）
+            pugi::xml_node emitterNodeRect = shapeNode.child("emitter");
+            if (emitterNodeRect) {
+                std::string emitterType = emitterNodeRect.attribute("type").as_string();
+                if (emitterType == "area") {
+                    glm::vec3 radiance = extractColor(emitterNodeRect.child("rgb").attribute("value").as_string());
+                    model->material.emission = radiance;
+                    // 计算形状的中心位置
+                    glm::vec3 center = glm::vec3(transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f));
+
+                    // 创建并添加光源
+                    Light light;
+                    light.position = center;
+                    light.u = v1 - v0;
+                    light.v = v3 = v0;
+                    light.color = radiance;
+                    light.intensity = 1.0f; // 根据需要调整强度
+                    light.samples = 16;
+                    lights.push_back(light);
+
+                    std::cout << "Added Area Light at (" << center.x << ", " << center.y << ", " << center.z << ") with Radiance ("
+                        << radiance.x << ", " << radiance.y << ", " << radiance.z << ")" << std::endl;
+                }
+                // 处理其他类型的 emitter 如果有的话
+            }
 
             addModel(model);
         }
