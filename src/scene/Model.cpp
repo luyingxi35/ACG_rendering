@@ -22,8 +22,7 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
 	// 处理当前节点的所有网格
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		aiMaterial* material = scene->mMaterials[scene->mMeshes[node->mMeshes[i]]->mMaterialIndex];
-		processMesh(mesh, scene, material);
+		processMesh(mesh, scene);
 	}
 
 	// 递归处理子节点
@@ -32,7 +31,7 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
 	}
 }
 
-void Model::processMesh(aiMesh* mesh, const aiScene* scene, aiMaterial* material) {
+void Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	ModelMesh modelMesh;
 
 	// 获取顶点数据

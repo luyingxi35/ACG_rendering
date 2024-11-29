@@ -32,7 +32,7 @@ struct AABB {
 
 struct BVHNode {
 	AABB bounds;                 // AABB for the node
-	std::vector<std::shared_ptr<Model>> models;   // models in the node
+	std::vector<Triangle> triangles;   // models in the node
 	BVHNode* left = nullptr;     // left subtree
 	BVHNode* right = nullptr;    // right subtree
 
@@ -44,8 +44,8 @@ struct BVHNode {
 class BVH {
 private:
 	BVHNode* root;
-	BVHNode* build(std::vector<std::shared_ptr<Model>> models, int depth);
-	AABB computeBounds(std::vector<std::shared_ptr<Model>>& models);
+	BVHNode* build(std::vector<Triangle> triangles, int depth);
+	AABB computeBounds(std::vector<Triangle>& triangles);
 	bool intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t);
 	void destroy(BVHNode* node) {
 		if (!node) return;
@@ -55,10 +55,9 @@ private:
 	}
 public:
 	BVH(const Scene& scene) {
-		std::vector<std::shared_ptr<Model>> models = scene.models;
-		root = build(models, 0);
+		std::vector<Triangle> triangles = scene.triangles;
+		root = build(triangles, 0);
 		std::cout << "Finish build the BVH tree." << std::endl;
-		std::cout << "Total depth: 5" << std::endl;
 	}
 	~BVH() { destroy(root); }
 

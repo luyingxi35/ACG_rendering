@@ -165,14 +165,31 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             //std::cout << filepath << std::endl;
             auto model = std::make_shared<Model>();
             model->loadModelFromFile(filepath);
+
+            // Load material
+            auto materialRef = shapeNode.child("ref");
+            auto id = materialRef.attribute("id").as_string();
+            pugi::xml_node bsdf = doc.child("scene").find_child_by_attribute("bsdf", "id", id);
+            if (bsdf) {
+                model->material = extractMaterialFromBSDF(bsdf);
+            }
+            else {
+                std::cerr << "未找到 id 为 " << id << " 的 bsdf 节点。" << std::endl;
+            }
+            //std::cout << "Extracting BSDF Type: " << materialTypeToString(model->material.type) << std::endl;
+            //// 在提取每个属性后添加输出
+            //std::cout << "alpha: " << model->material.alpha << "specular_rate: " << model->material.specularReflect.x << ", eta: " << model->material.eta.x << ", " << model->material.eta.y << ", " << model->material.eta.z << ", int_ior: " << model->material.int_ior
+            //    << ", ext_ior: " << model->material.ext_ior << std::endl;
+
             for (auto& mesh : model->meshes) {
                 for (size_t i = 0; i < mesh.indices.size() / 3; ++i) {
                     glm::vec3& v0 = mesh.vertices[mesh.indices[i * 3]];
                     glm::vec3& v1 = mesh.vertices[mesh.indices[i * 3 + 1]];
                     glm::vec3& v2 = mesh.vertices[mesh.indices[i * 3 + 2]];
 
-
-                    Triangle triangle = Triangle(v0, v1, v2);
+                    Material material= model->material;
+                    Triangle triangle = Triangle(v0, v1, v2, material);
+                    triangles.push_back(triangle);
                     model->triangles.push_back(triangle);
                     //std::cout << triangle.v0[0] << " " << triangle.v0[1] << " " << triangle.v0[2] << std::endl;
                     //std::cout << triangle.v1[0] << " " << triangle.v1[1] << " " << triangle.v1[2] << std::endl;
@@ -194,20 +211,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 &transform[3][0], &transform[3][1], &transform[3][2], &transform[3][3]);
             model->transformToWorld = transform;
 
-            // Load material
-            auto materialRef = shapeNode.child("ref");
-            auto id = materialRef.attribute("id").as_string();
-            pugi::xml_node bsdf = doc.child("scene").find_child_by_attribute("bsdf", "id", id);
-            if (bsdf) {
-                model->material = extractMaterialFromBSDF(bsdf);
-            }
-            else {
-                std::cerr << "未找到 id 为 " << id << " 的 bsdf 节点。" << std::endl;
-            }
-            //std::cout << "Extracting BSDF Type: " << materialTypeToString(model->material.type) << std::endl;
-            //// 在提取每个属性后添加输出
-            //std::cout << "alpha: " << model->material.alpha << "specular_rate: " << model->material.specularReflect.x << ", eta: " << model->material.eta.x << ", " << model->material.eta.y << ", " << model->material.eta.z << ", int_ior: " << model->material.int_ior
-            //    << ", ext_ior: " << model->material.ext_ior << std::endl;
+
 
             addModel(model);
         }
@@ -258,13 +262,6 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             v2 = glm::vec3(transformed_v2);
             v3 = glm::vec3(transformed_v3);
 
-            // 两个三角形组成一个矩形
-            Triangle tri1 = Triangle(v0, v1, v2);
-            Triangle tri2 = Triangle(v0, v2, v3);
-
-            model->triangles.push_back(tri1);
-            model->triangles.push_back(tri2);
-
             // 检查是否有发光体（emitter）
             pugi::xml_node emitterNodeRect = shapeNode.child("emitter");
             if (emitterNodeRect) {
@@ -290,6 +287,16 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 }
                 // 处理其他类型的 emitter 如果有的话
             }
+
+            // 两个三角形组成一个矩形
+            Material material_tri = model->material;
+            Triangle tri1 = Triangle(v0, v1, v2, material_tri);
+            Triangle tri2 = Triangle(v0, v2, v3, material_tri);
+
+            model->triangles.push_back(tri1);
+            model->triangles.push_back(tri2);
+            triangles.push_back(tri1);
+            triangles.push_back(tri2);
 
             addModel(model);
         }

@@ -44,6 +44,7 @@ struct Ray {
 class Triangle {
 public:
     glm::vec3 v0, v1, v2; // 三个顶点
+    Material material;
 
     
     bool intersect(const Ray& ray, float& t, glm::vec3& normal) {
@@ -71,7 +72,7 @@ public:
         t = dot(s2, e2) * invDenom;
 
         if (t > 1e-6 && b1 >= 0.0 && b2 >= 0.0 && b1 + b2 <= 1.0) {
-            glm::vec3 position = rayOrigin + criteria * rayDir;
+            glm::vec3 position = rayOrigin + t * rayDir;
             normal = n;
             return true;
         }
@@ -81,7 +82,7 @@ public:
     }
 
     // 构造函数
-    Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2)
-        : v0(v0), v1(v1), v2(v2) {}
+    Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, Material material)
+        : v0(v0), v1(v1), v2(v2), material(material) {}
 };
 #endif

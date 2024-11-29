@@ -9,65 +9,49 @@ AABB boundingBox(Triangle triangle) {
 	return { min, max };
 }
 
-AABB computeModelBounds(std::shared_ptr<Model> model) {
-	if (model->triangles.empty()) {
-		return AABB{ glm::vec3(FLT_MAX), glm::vec3(-FLT_MAX) }; // 返回一个空的 AABB
+AABB BVH::computeBounds(std::vector<Triangle>& triangles) {
+	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+	for (auto triangle : triangles) {
+		glm::vec3 triangle_min = boundingBox(triangle).min;
+		glm::vec3 triangle_max = boundingBox(triangle).max;
+		min = { std::min(min.x, triangle_min.x), std::min(min.y, triangle_min.y), std::min(min.z, triangle_min.z) };
+		max = { std::max(max.x, triangle_max.x), std::max(max.y, triangle_max.y), std::max(max.z, triangle_max.z) };
 	}
-
-	Triangle triangle_prime = model->triangles[0];
-	AABB bounds = boundingBox(triangle_prime);
-	for (auto& triangle : model->triangles) {
-		glm::vec3 min = boundingBox(triangle).min;
-		glm::vec3 max = boundingBox(triangle).max;
-		//std::cout << "min" << min[0] << " " << min[1] << " " << min[2] << std::endl;
-		//std::cout << "max" << max[0] << " " << max[1] << " " << max[2] << std::endl;
-		bounds.min = { std::min(bounds.min.x, min.x), std::min(bounds.min.y, min.y), std::min(bounds.min.z, min.z) };
-		bounds.max = { std::max(bounds.max.x, max.x), std::max(bounds.max.y, max.y), std::max(bounds.max.z, max.z) };
-		//std::cout << "result" << bounds.min[0] << " " << bounds.min[1] << " " << bounds.min[2] << std::endl;
-	}
-	return bounds;
+	return { min, max };
 }
 
-BVHNode* BVH::build(std::vector<std::shared_ptr<Model>> models, int depth) {
-	if (models.empty()) return nullptr;
+BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
+	if (triangles.empty()) return nullptr;
 
 	BVHNode* node = new BVHNode();
-	node->bounds = computeBounds(models);
+	node->bounds = computeBounds(triangles);
 	//std::cout << "Model min bound: " << node->bounds.min[0] << " " << node->bounds.min[1] << " " << node->bounds.min[2] << std::endl;
 	//std::cout << "Model max bound: " << node->bounds.max[0] << " " << node->bounds.max[1] << " " << node->bounds.max[2] << std::endl;
 
 
-	if (depth > 16 || models.size() <= 2) {
+	if (triangles.size() <= 16) {
 		//std::cout << "Too depth or too small." << std::endl;
-		node->models = std::move(models);
+		node->triangles = std::move(triangles);
 		return node;
 	}
 	int axis = depth % 3;
-	std::sort(models.begin(), models.end(),
-		[axis](const std::shared_ptr<Model>& a, const std::shared_ptr<Model>& b) -> bool {
-			glm::vec3 aCentroid = (computeModelBounds(a).min + computeModelBounds(a).max) * 0.5f;
-			glm::vec3 bCentroid = (computeModelBounds(b).min + computeModelBounds(b).max) * 0.5f;
+	std::sort(triangles.begin(), triangles.end(),
+		[axis](const Triangle& a, const Triangle& b) -> bool {
+			glm::vec3 aCentroid = (boundingBox(a).min + boundingBox(a).max) * 0.5f;
+			glm::vec3 bCentroid = (boundingBox(b).min + boundingBox(b).max) * 0.5f;
 			return aCentroid[axis] < bCentroid[axis];
 		});
 
-	size_t mid = models.size() / 2;
-	std::vector< std::shared_ptr<Model>> leftModels(models.begin(), models.begin() + mid);
-	std::vector< std::shared_ptr<Model>> rightModels(models.begin() + mid, models.end());
+	size_t mid = triangles.size() / 2;
+	std::vector< Triangle> leftModels(triangles.begin(), triangles.begin() + mid);
+	std::vector< Triangle> rightModels(triangles.begin() + mid, triangles.end());
 
 	node->left = build(leftModels, depth + 1);
 	node->right = build(rightModels, depth + 1);
 	//std::cout << "depth: " << depth << std::endl;
 
 	return node;
-}
-AABB BVH::computeBounds(std::vector<std::shared_ptr<Model>>& models) {
-	AABB bounds = computeModelBounds(models[0]);
-	for (auto& model : models) {
-		AABB modelBounds = computeModelBounds(model);
-		bounds.min = { std::min(bounds.min.x,modelBounds.min.x), std::min(bounds.min.y, modelBounds.min.y), std::min(bounds.min.z, modelBounds.min.z) };
-		bounds.max = { std::max(bounds.max.x,modelBounds.max.x), std::max(bounds.max.y, modelBounds.max.y), std::max(bounds.max.z, modelBounds.max.z) };
-	}
-	return bounds;
 }
 bool BVH::intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t) {
 	//std::cout << t;
@@ -80,15 +64,15 @@ bool BVH::intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, flo
 	if (node->isLeaf()) {
 		//std::cout << "Leaf: ";
 		bool hit = false;
-		for (auto& model : node->models) {
-			for (auto& triangle : model->triangles) {
-				float tTri = 1e7;
-				glm::vec3 normal = { 0.0,0.0,0.0 };
-				if (triangle.intersect(ray, tTri, normal) && tTri > tMin && tTri < t) {
-					t = tTri;
-					hit = true;
-					intersection.set(t, ray.position + t * ray.direction, normal, &model->material);
-				}
+		Material material = Material();
+		for (auto& triangle : node->triangles) {
+			float tTri = 1e7;
+			glm::vec3 normal = { 0.0,0.0,0.0 };
+			if (triangle.intersect(ray, tTri, normal) && tTri > tMin && tTri < t) {
+				t = tTri;
+				hit = true;
+				material = triangle.material;
+				intersection.set(t, ray.position + t * ray.direction, normal, material);
 			}
 		}
 		return hit;

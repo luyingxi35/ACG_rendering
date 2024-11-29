@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 16;
+const int MAX_BOUNCES = 8;
 
 //point light
 /*bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& result_light, Intersection& intersection) {
@@ -76,7 +76,7 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
 
                 // 计算漫反射贡献
                 float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
-                lightContribution += intersection.material()->diffuseReflect * diff * attenuation * light.color;
+                lightContribution += intersection.material().diffuseReflect * diff * attenuation * light.color;
             }
 
             // 将所有采样的贡献平均
@@ -99,9 +99,10 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
             }
 
             float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
-            diffuseColor += intersection.material()->diffuseReflect * diff * lightIntensity * light.color;
+            diffuseColor += intersection.material().diffuseReflect * diff * lightIntensity * light.color;
         }
     }
+    //std::cout << "Diffuse Color: " << diffuseColor[0] << " " << diffuseColor[1] << " " << diffuseColor[2] << std::endl;
 
     return diffuseColor;
 }
@@ -148,12 +149,12 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
     glm::vec3 normal = intersection.normal();  
 
     // Step 1: Handle two-sided material
-    if (intersection.material()->twoSided && glm::dot(ray.direction, normal) > 0) {   //back face
+    if (intersection.material().twoSided && glm::dot(ray.direction, normal) > 0) {   //back face
         normal = -normal;
     }
 
     // conductor specular light
-    if (intersection.material()->type == MaterialType::Conductor) {
+    if (intersection.material().type == MaterialType::Conductor) {
         for (const auto& light : scene.lights) {
             // 判断是否为面光源
             if (glm::length(light.u) > 0.0f && glm::length(light.v) > 0.0f) {
@@ -185,9 +186,9 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
 
                     // Perfect reflection direction
                     glm::vec3 reflectDir = glm::normalize(glm::reflect(-lightDir, normal));
-                    float spec = std::pow(std::max(0.0f, glm::dot(reflectDir, viewDir)), intersection.material()->alpha);
+                    float spec = std::pow(std::max(0.0f, glm::dot(reflectDir, viewDir)), intersection.material().alpha);
 
-                    lightContribution += intersection.material()->specularReflect * spec * attenuation * light.color;
+                    lightContribution += intersection.material().specularReflect * spec * attenuation * light.color;
                 }
 
                 // 将所有采样的贡献平均
@@ -211,16 +212,16 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                 // direction for perfect reflect
                 glm::vec3 reflectDir = glm::normalize(glm::reflect(-lightDir, normal));
                 float lightIntensity = light.intensity;
-                float spec = std::pow(std::max(0.0f, glm::dot(reflectDir, viewDir)), intersection.material()->alpha);
+                float spec = std::pow(std::max(0.0f, glm::dot(reflectDir, viewDir)), intersection.material().alpha);
 
-                specularColor += intersection.material()->specularReflect * spec * (1.0f / (lightDistance * lightDistance)) * lightIntensity;
+                specularColor += intersection.material().specularReflect * spec * (1.0f / (lightDistance * lightDistance)) * lightIntensity;
             }
         }
     }
     else {
         // material information
-        float alpha = intersection.material()->alpha;
-        glm::vec3 specularReflect = intersection.material()->specularReflect;
+        float alpha = intersection.material().alpha;
+        glm::vec3 specularReflect = intersection.material().specularReflect;
 
         // light contribute to specular term
         for (const auto& light : scene.lights) {
@@ -256,21 +257,21 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                     glm::vec3 halfDir = glm::normalize(lightDir + viewDir);
 
                     // 材质信息
-                    float intIOR = intersection.material()->int_ior;
-                    float extIOR = intersection.material()->ext_ior;
-                    glm::vec3 eta = intersection.material()->eta;
+                    float intIOR = intersection.material().int_ior;
+                    float extIOR = intersection.material().ext_ior;
+                    glm::vec3 eta = intersection.material().eta;
                     float eta_f = 0.0f;
                     if (glm::length(eta) < EPSILON && intIOR > EPSILON) {
                         eta_f = intIOR / extIOR;
                     }
-                    glm::vec3 k = intersection.material()->k;
+                    glm::vec3 k = intersection.material().k;
 
                     // 计算 GGX 分布 D, 几何遮蔽 G 和 菲涅尔项 F
                     float D = GGX_D(halfDir, normal, alpha);
                     float G = GGX_G(lightDir, viewDir, normal, halfDir);
                     glm::vec3 F = glm::vec3(0.0f);
                     float cosTheta = glm::dot(viewDir, halfDir);  // 计算视线方向与半程向量之间的夹角余弦
-                    if (intersection.material()->type == MaterialType::RoughConductor) {
+                    if (intersection.material().type == MaterialType::RoughConductor) {
                         // k != 0, 对导体材质（金属）的反射
                         F = computeFresnelConductor(cosTheta, eta, k);
                     }
@@ -309,21 +310,21 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                 glm::vec3 halfDir = glm::normalize(lightDir + viewDir);
 
                 // 材质信息
-                float intIOR = intersection.material()->int_ior;
-                float extIOR = intersection.material()->ext_ior;
-                glm::vec3 eta = intersection.material()->eta;
+                float intIOR = intersection.material().int_ior;
+                float extIOR = intersection.material().ext_ior;
+                glm::vec3 eta = intersection.material().eta;
                 float eta_f = 0.0f;
                 if (glm::length(eta) < EPSILON && intIOR > EPSILON) {
                     eta_f = intIOR / extIOR;
                 }
-                glm::vec3 k = intersection.material()->k;
+                glm::vec3 k = intersection.material().k;
 
                 // 计算 GGX 分布 D, 几何遮蔽 G 和 菲涅尔项 F
                 float D = GGX_D(halfDir, normal, alpha);
                 float G = GGX_G(lightDir, viewDir, normal, halfDir);
                 glm::vec3 F = glm::vec3(0.0f);
                 float cosTheta = glm::dot(viewDir, halfDir);  // 计算视线方向与半程向量之间的夹角余弦
-                if (intersection.material()->type == MaterialType::RoughConductor) {
+                if (intersection.material().type == MaterialType::RoughConductor) {
                     // k != 0, 对导体材质（金属）的反射
                     F = computeFresnelConductor(cosTheta, eta, k);
                 }
@@ -362,13 +363,14 @@ glm::vec3 PathTracer::refractDirection(const glm::vec3& incident, const glm::vec
         return eta * incident - (eta * cosi + sqrt(k)) * normal;
     }
 }
+// refraction light
 glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray) {
     glm::vec3 refractionColor(0.0f, 0.0f, 0.0f);  
     glm::vec3 viewDir = glm::normalize(ray.direction); 
     glm::vec3 normal = intersection.normal(); 
 
     // Step 1: Handle two-sided material
-    if (intersection.material()->twoSided && glm::dot(ray.direction, normal) > 0) {   //back face
+    if (intersection.material().twoSided && glm::dot(ray.direction, normal) > 0) {   //back face
         normal = -normal;
     }
     for (const auto& light : scene.lights) {
@@ -401,8 +403,8 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
                 }
 
                 // 计算折射贡献
-                float intIOR = intersection.material()->int_ior;
-                float extIOR = intersection.material()->ext_ior;
+                float intIOR = intersection.material().int_ior;
+                float extIOR = intersection.material().ext_ior;
                 float eta_f = intIOR / extIOR;
                 float F0 = 0.04f;
 
@@ -432,8 +434,8 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
                 continue; // Point is in shadow, skip this light
             }
 
-            float intIOR = intersection.material()->int_ior;
-            float extIOR = intersection.material()->ext_ior;
+            float intIOR = intersection.material().int_ior;
+            float extIOR = intersection.material().ext_ior;
             float eta_f = intIOR / extIOR;
             float F0 = 0.04f;
 
@@ -445,7 +447,7 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
         }
     }
 
-    //std::cout << "RefractionColor: " << refractionColor[0] << " " << refractionColor[1] << " " << refractionColor[2] << std::endl;
+    // std::cout << "RefractionColor: " << refractionColor[0] << " " << refractionColor[1] << " " << refractionColor[2] << std::endl;
     return refractionColor;
 }
 
@@ -480,42 +482,42 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
     float t = 1e6f;  // 初始 t 设置为一个较大的值
     bool intersect_scene = bvh.intersect(ray, intersection_scene, t);
     if (!intersect_scene) {
-        //std::cout << "No intersection." << std::endl;
+        // std::cout << "No intersection." << std::endl;
         return result_color;
     }
 
     if (intersect_scene) {
-        //std::cout << std::endl << std::endl << "Intersected!" << std::endl;
-        const Material* material_intersect = intersection_scene.material();
+        // std::cout << std::endl << std::endl << "Intersected!" << std::endl;
+        const Material material_intersect = intersection_scene.material();
         glm::vec3 position_new = intersection_scene.point();
         glm::vec3 normal = intersection_scene.normal();
 
         // 处理双面材质
-        if (material_intersect->twoSided && glm::dot(ray.direction, normal) > 0) {
+        if (material_intersect.twoSided && glm::dot(ray.direction, normal) > 0) {
             normal = -normal;
         }
 
         // 如果交点是一个发光体，累积其发光颜色
-        if (glm::length(material_intersect->emission) > EPSILON) {
+        if (glm::length(material_intersect.emission) > EPSILON) {
             // std::cout << "Intersect with area light!." << std::endl;
-            result_color += material_intersect->emission;
+            result_color += material_intersect.emission;
             // 如果发光体不进行追踪路径，可以直接返回
             // return result_color;
             // 但为了支持全局光照，继续追踪路径
         }
 
         // 漫反射光照
-        if (glm::length(material_intersect->diffuseReflect) > EPSILON) {
+        if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
             result_color += computeDiffuseLighting(intersection_scene, bvh, scene, gen);
         }
 
         // 镜面反射光照
-        if (glm::length(material_intersect->specularReflect) > EPSILON) {
+        if (glm::length(material_intersect.specularReflect) > EPSILON) {
             result_color += computeSpecularLighting(intersection_scene, bvh, scene, ray);
         }
 
         // 折射光照
-        if (material_intersect->int_ior > EPSILON && material_intersect->ext_ior > EPSILON) {
+        if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
             result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
         }
 
@@ -523,25 +525,25 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         float e = 0.0001f;
 
         // 递归反射
-        if (glm::length(material_intersect->specularReflect) > EPSILON) {
+        if (glm::length(material_intersect.specularReflect) > EPSILON) {
             //std::cout << "Intersect with specular material." << std::endl;
             glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
             Ray reflect_ray = { position_new + e * normal, reflect_dir };
-            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * material_intersect->specularReflect;
+            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * material_intersect.specularReflect;
         }
 
         // 递归漫反射
-        if (glm::length(material_intersect->diffuseReflect) > EPSILON) {
+        if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
             //std::cout << "Intersect with diffuse material." << std::endl;
             glm::vec3 diffuse_dir = generateRandomDirection(normal, gen);
             Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
-            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * material_intersect->diffuseReflect;
+            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * material_intersect.diffuseReflect;
         }
 
         // 递归折射
-        if (material_intersect->int_ior > EPSILON && material_intersect->ext_ior > EPSILON) {
+        if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
             //std::cout << "Intersect with refraction materail." << std::endl;
-            glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect->ext_ior, material_intersect->int_ior);
+            glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
             if (glm::length(refract_dir) > 0.0f) {
                 Ray refract_ray = { position_new - e * normal, refract_dir };
                 result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen);
@@ -598,10 +600,9 @@ void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bv
             }
 
             // 建议移除调试输出以提升性能和避免竞争
-            /*
+            
             std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
             std::cout << "Color: " << pixel_radiance[0] << " " << pixel_radiance[1] << " " << pixel_radiance[2] << std::endl;
-            */
 
             // 直接写入帧缓冲，无需互斥锁
             framebuffer[y * width + x] += pixel_radiance;

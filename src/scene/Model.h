@@ -31,11 +31,10 @@ public:
     std::vector<Triangle> triangles;
     glm::mat4 transformToWorld;
     Material material;
-
 private:
     GLuint loadTextureFromFile(const std::string& texturePath); // 处理纹理加载
     void processNode(aiNode* node, const aiScene* scene);
-    void processMesh(aiMesh* mesh, const aiScene* scene, aiMaterial* material);
+    void processMesh(aiMesh* mesh, const aiScene* scene);
 };
 
 #endif // MODEL_H
