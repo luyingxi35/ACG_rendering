@@ -155,7 +155,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     // camera.position = glm::vec3(4.44315, 16.9344, 49.9102);
 
     // camera.rotationMatrix = { {-1,0,0}, {0,1,0}, {0,0,-1} };
-    camera.position = glm::vec3(4.0f, 15.0f, 35.0f);
+    camera.position = glm::vec3(4.0f, 12.0f, 35.0f);
 
     std::cout << "Camera loaded: Position(" << camera.position.x << ", " << camera.position.y << ", " << camera.position.z << ")\n";
 
@@ -237,7 +237,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 加载变换矩阵
             pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
             std::string matrixValueRect = matrixNode.attribute("value").as_string();
-            glm::vec3 center = { -1.65 , 21.1794 , -30 };
+            glm::vec3 center = { -5 , 18 , -25};
             glm::mat3 rotation = { {4.51251, 0, 0}, {0, 5.3468, 6.49714e-008}, {0, 6.49714e-008, 3.86042} };
             rotation = glm::transpose(rotation);
 
@@ -246,14 +246,14 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 定义单位矩形的四个顶点
             glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
             glm::vec3 v1 = glm::vec3(10.0f, 0.0f, 0.0f);
-            glm::vec3 v2 = glm::vec3(10.0f, 10.0f, 0.0f);
-            glm::vec3 v3 = glm::vec3(0.0f, 10.0f, 0.0f);
+            glm::vec3 v2 = glm::vec3(10.0f, 15.0f, 0.0f);
+            glm::vec3 v3 = glm::vec3(0.0f, 15.0f, 0.0f);
 
             // 应用变换矩阵
-            glm::vec3 transformed_v0 = rotation * v0 + center;
-            glm::vec3 transformed_v1 = rotation * v1 + center;
-            glm::vec3 transformed_v2 = rotation * v2 + center;
-            glm::vec3 transformed_v3 = rotation * v3 + center;
+            v0 = v0 + center;
+            v1 = v1 + center;
+            v2 = v2 + center;
+            v3 = v3 + center;
 
             // 检查是否有发光体（emitter）
             pugi::xml_node emitterNodeRect = shapeNode.child("emitter");
