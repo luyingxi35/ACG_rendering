@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 8;
+const int MAX_BOUNCES = 16;
 
 //point light
 /*bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& result_light, Intersection& intersection) {
@@ -601,8 +601,8 @@ void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bv
 
             // 建议移除调试输出以提升性能和避免竞争
             
-            std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
-            std::cout << "Color: " << pixel_radiance[0] << " " << pixel_radiance[1] << " " << pixel_radiance[2] << std::endl;
+            // std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
+            // std::cout << "Color: " << pixel_radiance[0] << " " << pixel_radiance[1] << " " << pixel_radiance[2] << std::endl;
 
             // 直接写入帧缓冲，无需互斥锁
             framebuffer[y * width + x] += pixel_radiance;

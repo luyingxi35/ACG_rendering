@@ -58,6 +58,8 @@ public:
 		std::vector<Triangle> triangles = scene.triangles;
 		root = build(triangles, 0);
 		std::cout << "Finish build the BVH tree." << std::endl;
+		std::cout << "Root: " << root->bounds.min[0] << ", " << root->bounds.min[1] << ", " << root->bounds.min[0] << ", " << "   "
+			<< root->bounds.max[0] << ", " << root->bounds.max[1] << ", " << root->bounds.max[2] << std::endl;
 	}
 	~BVH() { destroy(root); }
 

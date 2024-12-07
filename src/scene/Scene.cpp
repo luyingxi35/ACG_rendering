@@ -152,7 +152,10 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     camera.fov = cameraNode.child("float").attribute("value").as_float();
     
     camera.rotationMatrix = { {-0.993341, -0.0130485, -0.114467}, {0, 0.993565, -0.11326}, {0.115208, -0.112506, -0.98695}};
-    camera.position = glm::vec3(4.44315, 16.9344, 49.9102);
+    // camera.position = glm::vec3(4.44315, 16.9344, 49.9102);
+
+    // camera.rotationMatrix = { {-1,0,0}, {0,1,0}, {0,0,-1} };
+    camera.position = glm::vec3(4.0f, 15.0f, 35.0f);
 
     std::cout << "Camera loaded: Position(" << camera.position.x << ", " << camera.position.y << ", " << camera.position.z << ")\n";
 
@@ -234,33 +237,23 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 加载变换矩阵
             pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
             std::string matrixValueRect = matrixNode.attribute("value").as_string();
-            glm::mat4 transformRect;
-            sscanf_s(matrixValueRect.c_str(), "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
-                &transformRect[0][0], &transformRect[0][1], &transformRect[0][2], &transformRect[0][3],
-                &transformRect[1][0], &transformRect[1][1], &transformRect[1][2], &transformRect[1][3],
-                &transformRect[2][0], &transformRect[2][1], &transformRect[2][2], &transformRect[2][3],
-                &transformRect[3][0], &transformRect[3][1], &transformRect[3][2], &transformRect[3][3]);
-            model->transformToWorld = transformRect;
+            glm::vec3 center = { -1.65 , 21.1794 , -30 };
+            glm::mat3 rotation = { {4.51251, 0, 0}, {0, 5.3468, 6.49714e-008}, {0, 6.49714e-008, 3.86042} };
+            rotation = glm::transpose(rotation);
 
             // 定义单位矩形中心为 (0.5, 0.5, 0.0)，应用变换矩阵得到实际中心
-            glm::vec4 unitCenter = transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f);
-            glm::vec3 center = glm::vec3(unitCenter) / unitCenter.w;
 
             // 定义单位矩形的四个顶点
             glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
-            glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 0.0f);
-            glm::vec3 v2 = glm::vec3(1.0f, 1.0f, 0.0f);
-            glm::vec3 v3 = glm::vec3(0.0f, 1.0f, 0.0f);
+            glm::vec3 v1 = glm::vec3(10.0f, 0.0f, 0.0f);
+            glm::vec3 v2 = glm::vec3(10.0f, 10.0f, 0.0f);
+            glm::vec3 v3 = glm::vec3(0.0f, 10.0f, 0.0f);
 
             // 应用变换矩阵
-            glm::vec4 transformed_v0 = transformRect * glm::vec4(v0, 1.0f);
-            glm::vec4 transformed_v1 = transformRect * glm::vec4(v1, 1.0f);
-            glm::vec4 transformed_v2 = transformRect * glm::vec4(v2, 1.0f);
-            glm::vec4 transformed_v3 = transformRect * glm::vec4(v3, 1.0f);
-            v0 = glm::vec3(transformed_v0);
-            v1 = glm::vec3(transformed_v1);
-            v2 = glm::vec3(transformed_v2);
-            v3 = glm::vec3(transformed_v3);
+            glm::vec3 transformed_v0 = rotation * v0 + center;
+            glm::vec3 transformed_v1 = rotation * v1 + center;
+            glm::vec3 transformed_v2 = rotation * v2 + center;
+            glm::vec3 transformed_v3 = rotation * v3 + center;
 
             // 检查是否有发光体（emitter）
             pugi::xml_node emitterNodeRect = shapeNode.child("emitter");
@@ -270,7 +263,6 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     glm::vec3 radiance = extractColor(emitterNodeRect.child("rgb").attribute("value").as_string());
                     model->material.emission = radiance;
                     // 计算形状的中心位置
-                    glm::vec3 center = glm::vec3(transformRect * glm::vec4(0.5f, 0.5f, 0.0f, 1.0f));
 
                     // 创建并添加光源
                     Light light;
@@ -286,19 +278,20 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                         << radiance.x << ", " << radiance.y << ", " << radiance.z << ")" << std::endl;
                 }
                 // 处理其他类型的 emitter 如果有的话
+                // 两个三角形组成一个矩形
+                Material material_tri = model->material;
+                Triangle tri1 = Triangle(v0, v1, v2, material_tri);
+                Triangle tri2 = Triangle(v0, v2, v3, material_tri);
+
+                model->triangles.push_back(tri1);
+                model->triangles.push_back(tri2);
+                triangles.push_back(tri1);
+                triangles.push_back(tri2);
+
+                addModel(model);
             }
 
-            // 两个三角形组成一个矩形
-            Material material_tri = model->material;
-            Triangle tri1 = Triangle(v0, v1, v2, material_tri);
-            Triangle tri2 = Triangle(v0, v2, v3, material_tri);
-
-            model->triangles.push_back(tri1);
-            model->triangles.push_back(tri2);
-            triangles.push_back(tri1);
-            triangles.push_back(tri2);
-
-            addModel(model);
+            
         }
     }
 }
