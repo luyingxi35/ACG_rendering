@@ -35,12 +35,15 @@ BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
 		node->triangles = std::move(triangles);
 		return node;
 	}
-	int axis = depth % 3;
+	glm::vec3 extent = node->bounds.max - node->bounds.min;
+	int axis = 0;
+	if (extent[1] > extent[0])
+		axis = 1;
+	if (extent[2] > extent[axis])
+		axis = 2;
 	std::sort(triangles.begin(), triangles.end(),
 		[axis](const Triangle& a, const Triangle& b) -> bool {
-			glm::vec3 aCentroid = (boundingBox(a).min + boundingBox(a).max) * 0.5f;
-			glm::vec3 bCentroid = (boundingBox(b).min + boundingBox(b).max) * 0.5f;
-			return aCentroid[axis] < bCentroid[axis];
+			return a.centroid[axis] < b.centroid[axis];
 		});
 
 	size_t mid = triangles.size() / 2;

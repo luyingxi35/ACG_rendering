@@ -3,6 +3,7 @@
 #define M_PI 3.1415926535
 
 const int MAX_BOUNCES = 16;
+const float P = 0.6;
 
 //point light
 /*bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& result_light, Intersection& intersection) {
@@ -35,8 +36,8 @@ glm::vec3 sampleAreaLight(const Light& light, int sampleIndex, int totalSamples)
 
     // 计算面光源上的采样点
     glm::vec3 sampledPoint = light.position +
-        (light.u * (u_sample - 0.5f) * 2.0f) +
-        (light.v * (v_sample - 0.5f) * 2.0f);
+        (light.u * u_sample) +
+        (light.v * v_sample);
 
     return sampledPoint;
 }
@@ -48,6 +49,7 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
     for (const auto& light : scene.lights) {
         // 判断是否为面光源（通过检查 u 和 v 向量）
         if (glm::length(light.u) > 0.0f && glm::length(light.v) > 0.0f) {
+            //std::cout << "Light size: (" << light.u[0] << ", "<< light.u[1] <<", " << light.u[2] << "), (" << light.v[0] << ", " << light.v[1] << ", " << light.v[2] << ")" << std::endl;
             // 面光源：进行多次采样
             int numSamples = light.samples;
             glm::vec3 lightContribution(0.0f, 0.0f, 0.0f);
@@ -55,6 +57,7 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
             for (int i = 0; i < numSamples; ++i) {
                 // 在面光源上采样一个点
                 glm::vec3 sampledPoint = sampleAreaLight(light, i, numSamples);
+                //std::cout << "smaplePoint: " << sampledPoint[0] << ", " << sampledPoint[1] << ", " << sampledPoint[2] << std::endl;
 
                 // 计算从交点到采样点的方向和距离
                 glm::vec3 lightDir = sampledPoint - intersection.point();
@@ -64,19 +67,49 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                 // 计算光强衰减
                 float attenuation = light.intensity / (lightDistance * lightDistance);
 
+                // Compute the cosine of the angle between the light direction and the surface normal
+                float cosTheta1 = glm::dot(intersection.normal(), lightDir);
+                //std::cout << "cos1: " << cosTheta1 << std::endl;
+                if (cosTheta1 <= 0.0f)
+                    continue; // Light is below the surface
+                glm::vec3 y = glm::vec3(0.0f, 1.0f, 0.0f);
+                float cosTheta2 = glm::dot(lightDir, y);
+                //std::cout << "cos2: " << cosTheta2 << std::endl;
+
                 // 阴影射线：从交点到采样点
                 float e = 0.0001f;
                 Ray shadowRay = { intersection.point() + e * intersection.normal(), lightDir };
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
                 bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
+                //if (inShadow)
+                  //  std::cout << 1 << std::endl;
+                //else
+                  //  std::cout << 0 << std::endl;
                 if (inShadow) {
                     continue; // 采样点被遮挡，跳过
                 }
 
                 // 计算漫反射贡献
-                float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
-                lightContribution += intersection.material().diffuseReflect * diff * attenuation * light.color;
+                // float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
+                // lightContribution += intersection.material().diffuseReflect * diff * attenuation * light.color;
+
+                // compute BRDF (Lambertian)
+                glm::vec3 brdf = intersection.material().diffuseReflect;
+                 // compute PDF for area light sampling (uniform over area)
+                float area = glm::length(glm::cross(light.u, light.v));
+                float pdf = 1.0f / area;
+                //std::cout << "pdf: " << pdf << std::endl;
+
+                // Importance Sampling: cosine-weighted distribution aligns with BRDF
+                float cosineWeightedPDF = cosTheta1 * cosTheta2;
+
+                // Since we are using uniform area light sampling, adjust BRDF * cosine / PDF
+                glm::vec3 weight = (brdf * cosTheta1) / (pdf);
+                //std::cout << "weight: " << weight[0] << ", " << weight[1] << ", " << weight[2] << std::endl;
+
+                lightContribution += intersection.material().diffuseReflect * weight * light.color * attenuation;
+                //std::cout << "light: " << lightContribution[0] << ", " << lightContribution[1] << ", " << lightContribution[2] << std::endl;
             }
 
             // 将所有采样的贡献平均
@@ -85,8 +118,14 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
         else { // 点光源
             glm::vec3 lightDir = light.position - intersection.point();
             float lightDistance = glm::length(lightDir);
-            float lightIntensity = light.intensity / (lightDistance * lightDistance);
+            float attenuation = light.intensity / (lightDistance * lightDistance);
             lightDir = glm::normalize(lightDir);
+
+            // Compute the cosine of the angle between light direction and normal
+            float cosTheta1 = glm::dot(intersection.normal(), lightDir);
+            if (cosTheta1 <= 0.0f)
+                continue; // Light is below the surface
+            float cosThera2 = glm::dot(lightDir, glm::vec3(0.0f, 0.0f, -1.0f));
 
             // 阴影射线：从交点到光源位置
             float e = 0.0001f;
@@ -98,8 +137,19 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                 continue; // 被遮挡，跳过
             }
 
-            float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
-            diffuseColor += intersection.material().diffuseReflect * diff * lightIntensity * light.color;
+            //float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
+            //diffuseColor += intersection.material().diffuseReflect * diff * lightIntensity * light.color;
+
+             // Compute BRDF (Lambertian)
+            glm::vec3 brdf = intersection.material().diffuseReflect;
+
+            // Compute PDF for point light sampling (delta distribution, handled via direct lighting)
+            float pdf = glm::length(light.u) * glm::length(light.v);
+
+            // Importance Sampling: direct illumination from point light
+            glm::vec3 weight = (brdf * cosTheta1 * cosThera2) / pdf;
+
+            diffuseColor += weight * light.color * attenuation;
         }
     }
     //std::cout << "Diffuse Color: " << diffuseColor[0] << " " << diffuseColor[1] << " " << diffuseColor[2] << std::endl;
@@ -452,7 +502,8 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
 }
 
 
-
+// importance sampling
+// cosine-weighted hemisphere sampling for diffuse reflection
 glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal, std::mt19937& gen) {
     std::uniform_real_distribution<float> distribution(0.0, 1.0);
 
@@ -469,6 +520,27 @@ glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal, std::mt19937& ge
     glm::vec3 d = (u * std::cos(r1) * r2s + v * std::sin(r1) * r2s + w * glm::sqrt(1.0f - r2));
 
     return glm::normalize(d);
+
+    /*float r1 = distribution(gen);
+    float r2 = distribution(gen);
+
+    float phi = 2.0f * M_PI * r1;
+    float theta = std::acos(std::sqrt(1.0f - r2));
+
+    float x = std::sin(theta) * std::cos(phi);
+    float y = std::sin(theta) * std::sin(phi);
+    float z = std::cos(theta);
+
+    // Create orthonormal basis
+    glm::vec3 w = glm::normalize(normal);
+    glm::vec3 a = (std::abs(w.x) > 0.1f) ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 u = glm::normalize(glm::cross(a, w));
+    glm::vec3 v = glm::cross(w, u);
+
+    // Transform (x, y, z) to world coordinates
+    glm::vec3 direction = glm::normalize(x * u + y * v + z * w);
+    return direction;*/
+
 }
 
 
@@ -479,7 +551,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
 
     glm::vec3 result_color = glm::vec3(0.0f);
     Intersection intersection_scene;
-    float t = 1e6f;  // 初始 t 设置为一个较大的值
+    float t = 1e6f;  // init t set to a large value
     bool intersect_scene = bvh.intersect(ray, intersection_scene, t);
     if (!intersect_scene) {
         // std::cout << "No intersection." << std::endl;
@@ -498,12 +570,10 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         }
 
         // 如果交点是一个发光体，累积其发光颜色
-        if (glm::length(material_intersect.emission) > EPSILON) {
+        if (glm::length(material_intersect.emission) > 1e-4) {
             // std::cout << "Intersect with area light!." << std::endl;
-            result_color += material_intersect.emission;
-            // 如果发光体不进行追踪路径，可以直接返回
-            // return result_color;
-            // 但为了支持全局光照，继续追踪路径
+            result_color = material_intersect.emission;
+            return result_color;
         }
 
         // 漫反射光照
@@ -521,6 +591,17 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
         }
 
+        // Russian Roulette for Path Termination
+        if (bounceCount >= 5) {
+            float p = P;
+            std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+            float rand = distribution(gen);
+            if (rand > p) {
+                return result_color;
+            }
+            result_color /= p;
+        }
+
         int bounceCount_new = bounceCount + 1;
         float e = 0.0001f;
 
@@ -529,7 +610,8 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             //std::cout << "Intersect with specular material." << std::endl;
             glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
             Ray reflect_ray = { position_new + e * normal, reflect_dir };
-            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * material_intersect.specularReflect;
+            float cosTheta = glm::dot(normal, reflect_dir);
+            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * material_intersect.specularReflect * cosTheta / (2 * static_cast<float> (M_PI));
         }
 
         // 递归漫反射
@@ -537,7 +619,8 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             //std::cout << "Intersect with diffuse material." << std::endl;
             glm::vec3 diffuse_dir = generateRandomDirection(normal, gen);
             Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
-            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * material_intersect.diffuseReflect;
+            float cosTheta = glm::dot(normal, diffuse_dir);
+            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * material_intersect.diffuseReflect * cosTheta / (2 * static_cast<float> (M_PI));
         }
 
         // 递归折射
@@ -546,7 +629,8 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
             if (glm::length(refract_dir) > 0.0f) {
                 Ray refract_ray = { position_new - e * normal, refract_dir };
-                result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen);
+                float cosTheta = glm::dot(normal, refract_dir);
+                result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * cosTheta / (2 * static_cast<float> (M_PI));
             }
         }
     }
@@ -558,7 +642,8 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
     return result_color;
 }
 
-//generate a sample
+// generate a sample
+// for anti-aliasing
 glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int height, std::mt19937& gen) {
     std::uniform_real_distribution<float> dis(0.0f, 1.0f);
     float aspect_ratio = static_cast<float>(width) / static_cast<float>(height);

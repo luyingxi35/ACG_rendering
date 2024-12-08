@@ -28,7 +28,7 @@ float extractFloat(pugi::xml_node bsdf, const std::string& name) {
             return node.attribute("value").as_float();
         }
     }
-    return 0.0f;  
+    return 0.0f;
 }
 
 glm::vec3 extractRGB(pugi::xml_node bsdf, const std::string& name) {
@@ -37,7 +37,7 @@ glm::vec3 extractRGB(pugi::xml_node bsdf, const std::string& name) {
             return extractColor(node.attribute("value").as_string());
         }
     }
-    return glm::vec3(0.0f); 
+    return glm::vec3(0.0f);
 }
 
 Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
@@ -103,7 +103,7 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
         }
     }
     else {
-        material.type = MaterialType::Diffuse; 
+        material.type = MaterialType::Diffuse;
     }
 
     return material;
@@ -146,12 +146,12 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         lights.push_back(light);
     }
     std::cout << "Finish adding lights." << std::endl;
-    
+
     // Extract camera
     pugi::xml_node cameraNode = doc.child("scene").child("sensor");
     camera.fov = cameraNode.child("float").attribute("value").as_float();
-    
-    camera.rotationMatrix = { {-0.993341, -0.0130485, -0.114467}, {0, 0.993565, -0.11326}, {0.115208, -0.112506, -0.98695}};
+
+    camera.rotationMatrix = { {-0.993341, -0.0130485, -0.114467}, {0, 0.993565, -0.11326}, {0.115208, -0.112506, -0.98695} };
     // camera.position = glm::vec3(4.44315, 16.9344, 49.9102);
 
     // camera.rotationMatrix = { {-1,0,0}, {0,1,0}, {0,0,-1} };
@@ -190,8 +190,8 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     glm::vec3& v1 = mesh.vertices[mesh.indices[i * 3 + 1]];
                     glm::vec3& v2 = mesh.vertices[mesh.indices[i * 3 + 2]];
 
-                    Material material= model->material;
-                    Triangle triangle = Triangle(v0, v1, v2, material);
+                    Material material = model->material;
+                    Triangle triangle = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material);
                     triangles.push_back(triangle);
                     model->triangles.push_back(triangle);
                     //std::cout << triangle.v0[0] << " " << triangle.v0[1] << " " << triangle.v0[2] << std::endl;
@@ -237,7 +237,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 加载变换矩阵
             pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
             std::string matrixValueRect = matrixNode.attribute("value").as_string();
-            glm::vec3 center = { -5 , 18 , -25};
+            glm::vec3 center = { -5 , 16 , -25 };
             glm::mat3 rotation = { {4.51251, 0, 0}, {0, 5.3468, 6.49714e-008}, {0, 6.49714e-008, 3.86042} };
             rotation = glm::transpose(rotation);
 
@@ -270,8 +270,8 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 1.0f; // 根据需要调整强度
-                    light.samples = 16;
+                    light.intensity = 0.2f; // 根据需要调整强度
+                    light.samples = 32;
                     lights.push_back(light);
 
                     std::cout << "Added Area Light at (" << center.x << ", " << center.y << ", " << center.z << ") with Radiance ("
@@ -280,8 +280,8 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 // 处理其他类型的 emitter 如果有的话
                 // 两个三角形组成一个矩形
                 Material material_tri = model->material;
-                Triangle tri1 = Triangle(v0, v1, v2, material_tri);
-                Triangle tri2 = Triangle(v0, v2, v3, material_tri);
+                Triangle tri1 = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material_tri);
+                Triangle tri2 = Triangle(v0, v2, v3, (v0 + v2 + v3) * 0.33333f, material_tri);
 
                 model->triangles.push_back(tri1);
                 model->triangles.push_back(tri2);
@@ -291,9 +291,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 addModel(model);
             }
 
-            
+
         }
     }
 }
-
-

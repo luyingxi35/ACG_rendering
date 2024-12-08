@@ -12,13 +12,14 @@ int main() {
 
     scene.extractSceneDataFromXML("assets/scene_v3.xml", scene.lights, scene.camera);
     std::cout <<std::endl<< "Finish loading models." << std::endl;
+    std::cout << scene.triangles.size() << std::endl;
 
     // create pathTracer and BVH Tree
     PathTracer pathTracer;
     BVH bvh(scene);
 
     // rendering the scene and output the picture
-    pathTracer.render(scene, scene.camera, bvh, 1280, 720, 16, 16);  
+    pathTracer.render(scene, scene.camera, bvh, 320, 180, 16, 16);  
 
     std::cout << "Rendering complete!" << std::endl;
     return 0;

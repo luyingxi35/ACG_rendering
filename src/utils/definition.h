@@ -45,7 +45,7 @@ class Triangle {
 public:
     glm::vec3 v0, v1, v2; // 三个顶点
     Material material;
-
+    glm::vec3 centroid;
     
     bool intersect(const Ray& ray, float& t, glm::vec3& normal) {
         glm::vec3 rayOrigin = ray.position;
@@ -82,7 +82,7 @@ public:
     }
 
     // 构造函数
-    Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, Material material)
-        : v0(v0), v1(v1), v2(v2), material(material) {}
+    Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, glm::vec3 vc, Material material)
+        : v0(v0), v1(v1), v2(v2), centroid(vc), material(material) {}
 };
 #endif
