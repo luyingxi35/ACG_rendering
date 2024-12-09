@@ -64,9 +64,12 @@
 			<float name="int_ior" value="1.5" />
 			<float name="ext_ior" value="1" />
 			<boolean name="nonlinear" value="true" />
-			<texture name="diffuse_reflectance" type="bitmap">
-				<string name="filename" value="textures/WoodPanel.png" />
-				<string name="filter_type" value="bilinear" />
+			<!--<texture name="diffuse_reflectance" type="bitmap">-->
+				<!--<string name="filename" value="textures/WoodPanel.png" />-->
+				<!--<string name="filter_type" value="bilinear" />-->
+			<!--</texture>-->
+			<texture name="diffuse_reflectance" type="constant">
+				<rgb name="value" value="0.545,0.271,0.075" />
 			</texture>
 		</bsdf>
 	</bsdf>
@@ -77,17 +80,23 @@
 			<float name="int_ior" value="1.5" />
 			<float name="ext_ior" value="1" />
 			<boolean name="nonlinear" value="true" />
-			<texture name="diffuse_reflectance" type="bitmap">
-				<string name="filename" value="textures/WoodFloor.jpg" />
-				<string name="filter_type" value="bilinear" />
+			<!--<texture name="diffuse_reflectance" type="bitmap">-->
+				<!--<string name="filename" value="textures/WoodFloor.jpg" />-->
+				<!--<string name="filter_type" value="bilinear" />-->
+			<!--</texture>-->
+			<texture name="diffuse_reflectance" type="constant">
+				<rgb name="value" value="0.545,0.271,0.075" />
 			</texture>
 		</bsdf>
 	</bsdf>
 	<bsdf type="twosided" id="LabelBSDF">
 		<bsdf type="diffuse">
-			<texture name="reflectance" type="bitmap">
-				<string name="filename" value="textures/Label.png" />
-				<string name="filter_type" value="bilinear" />
+			<!--<texture name="reflectance" type="bitmap">-->
+				<!--<string name="filename" value="textures/Label.png" />-->
+				<!--<string name="filter_type" value="bilinear" />-->
+			<!--</texture>-->
+			<texture name="diffuse_reflectance" type="constant">
+				<rgb name="value" value="0.545,0.271,0.075" />
 			</texture>
 		</bsdf>
 	</bsdf>

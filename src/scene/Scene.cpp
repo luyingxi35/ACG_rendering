@@ -32,9 +32,20 @@ float extractFloat(pugi::xml_node bsdf, const std::string& name) {
 }
 
 glm::vec3 extractRGB(pugi::xml_node bsdf, const std::string& name) {
+    // 1. for rgb
     for (auto node : bsdf.children("rgb")) {
         if (node && std::string(node.attribute("name").as_string()) == name) {
             return extractColor(node.attribute("value").as_string());
+        }
+    }
+    // 2. for texture
+    for (auto node : bsdf.children("texture")) {
+        if (node && std::string(node.attribute("name").as_string()) == name &&
+            std::string(node.attribute("type").as_string()) == "constant") {
+            auto rgbNode = node.child("rgb");
+            if (rgbNode && std::string(rgbNode.attribute("name").as_string()) == "value") {
+                return extractColor(rgbNode.attribute("value").as_string());
+            }
         }
     }
     return glm::vec3(0.0f);
@@ -261,8 +272,6 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 std::string emitterType = emitterNodeRect.attribute("type").as_string();
                 if (emitterType == "area") {
                     glm::vec3 radiance = extractColor(emitterNodeRect.child("rgb").attribute("value").as_string());
-                    model->material.emission = radiance;
-                    // 计算形状的中心位置
 
                     // 创建并添加光源
                     Light light;
@@ -273,6 +282,8 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.intensity = 0.2f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
+
+                    model->material.emission = radiance * light.intensity;
 
                     std::cout << "Added Area Light at (" << center.x << ", " << center.y << ", " << center.z << ") with Radiance ("
                         << radiance.x << ", " << radiance.y << ", " << radiance.z << ")" << std::endl;
