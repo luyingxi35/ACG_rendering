@@ -662,15 +662,15 @@ glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int heig
 }
 
 // 渲染图像的一部分，无需互斥锁，因为每个线程处理独立的像素区域
-void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
+/*void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
     int width, int height, int samplesPerPixel,
-    int xStart, int xEnd, std::vector<glm::vec3>& framebuffer,
+    int yStart, int yEnd, std::vector<glm::vec3>& framebuffer,
     std::mt19937& gen) {
 
     std::uniform_real_distribution<float> dis(0.0f, 1.0f);
 
-    for (int y = 0; y < height; ++y) {
-        for (int x = xStart; x < xEnd; x++) {
+    for (int x = 0; x < width; ++x) {
+        for (int y = yStart; y < yEnd; y++) {
             if (x < 0 || x >= width || y < 0 || y >= height) {
                 std::cerr << "Pixel index out-of-bounds: (" << x << ", " << y << ")\n";
                 continue;
@@ -686,11 +686,59 @@ void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bv
 
             // 建议移除调试输出以提升性能和避免竞争
             
-            // std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
+            std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
             // std::cout << "Color: " << pixel_radiance[0] << " " << pixel_radiance[1] << " " << pixel_radiance[2] << std::endl;
 
             // 直接写入帧缓冲，无需互斥锁
             framebuffer[y * width + x] += pixel_radiance;
+        }
+    }
+}*/
+
+void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel,
+    std::vector<glm::vec3>& framebuffer, std::mt19937& gen) {
+    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+
+    while (true) {
+        Task task;
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            condition.wait(lock, [this] {return !task_queue.empty() || done; });
+
+            if (task_queue.empty()) {
+                if (done) return;
+                else continue;
+            }
+
+            task = task_queue.front();
+            task_queue.pop();
+        }
+
+        for (int y = task.yStart; y < task.yEnd; y++) {
+            for (int x = task.xStart; x < task.xEnd; x++) {
+                if (x < 0 || x >= width || y < 0 || y >= height) {
+                    std::lock_guard<std::mutex> lock(cout_mutex);
+                    std::cerr << "Pixel index out-of-bound: (" << x << ", " << y << ")\n";
+                    continue;
+                }
+
+                glm::vec3 pixel_radiance(0.0f, 0.0f, 0.0f);
+
+                for (int i = 0; i < samplesPerPixel; i++) {
+                    glm::vec3 sample_direction = generateSample(camera, x, y, width, height, gen);
+                    Ray ray = { camera.position, sample_direction };
+                    glm::vec3 color_mid = tracePath(ray, scene, bvh, 0, gen);
+                    pixel_radiance += color_mid * (1.0f / static_cast<float>(samplesPerPixel));
+                }
+                if (y >= 100) {
+                    {
+                        std::lock_guard<std::mutex> lock(cout_mutex);
+                        std::cout << "Finish render pixel: (" << x << ", " << y << ")\n";
+                    }
+                }
+
+                framebuffer[y * width + x] += pixel_radiance;
+            }
         }
     }
 }
@@ -703,24 +751,27 @@ void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
     std::vector<glm::vec3> framebuffer(width * height, glm::vec3(0.0f));
     std::vector<std::thread> threadPool;
 
+    const int xtileSize = 32;
+    const int ytileSize = 18;
+    std::cout << "xtileSize: " << xtileSize << "ytileSize: " << ytileSize << std::endl;
+
+    std::vector<unsigned int> seeds(numThreads);
+    std::mt19937 rd_gen(std::random_device{}());
+    for (auto& seed : seeds) {
+        seed = rd_gen();
+    }
+
     // 计算每个线程处理的像素列范围
-    int colsPerThread = width / numThreads;
-    int remainingCols = width % numThreads;
+    // int colsPerThread = height / numThreads;
+    // int remainingCols = height % numThreads;
 
     for (int t = 0; t < numThreads; ++t) {
-        int xStart = t * colsPerThread;
-        int xEnd = (t == numThreads - 1) ? (xStart + colsPerThread + remainingCols) : (xStart + colsPerThread);
-        if (xEnd > width) xEnd = width; // 防止最终的 xEnd 超出 width
-
-        // 为每个线程创建独立的随机数生成器
-        std::mt19937 thread_gen(std::random_device{}());
-
-        threadPool.emplace_back(&PathTracer::renderSection, this, std::ref(scene), std::ref(camera), std::ref(bvh),
-            width, height, samplesPerPixel,
-            xStart, xEnd,
-            std::ref(framebuffer),
-            std::ref(thread_gen)); // 传递生成器引用
+        std::mt19937 thread_gen(seeds[t]);
+        threadPool.emplace_back(&PathTracer::renderWorker, this, std::ref(scene), std::ref(camera), std::ref(bvh),
+            width, height, samplesPerPixel, std::ref(framebuffer), std::ref(thread_gen));
     }
+
+    enqueueTasks(xtileSize, ytileSize, width, height);
 
     // 等待所有线程完成
     for (auto& thread : threadPool)
