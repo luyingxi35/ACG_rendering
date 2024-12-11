@@ -1,7 +1,7 @@
 #include "BVH.h"
 
 AABB boundingBox(Triangle triangle) {
-	glm::vec3 v0 = triangle.v0;
+			glm::vec3 v0 = triangle.v0;
 	glm::vec3 v1 = triangle.v1;
 	glm::vec3 v2 = triangle.v2;
 	glm::vec3 min = { std::min({v0.x, v1.x, v2.x}), std::min({v0.y, v1.y, v2.y}), std::min({v0.z, v1.z, v2.z}) };
@@ -9,7 +9,7 @@ AABB boundingBox(Triangle triangle) {
 	return { min, max };
 }
 
-AABB BVH::computeBounds(std::vector<Triangle>& triangles) {
+AABB BVH::computeBounds(std::vector<Triangle> triangles) {
 	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 	for (auto triangle : triangles) {
@@ -30,7 +30,7 @@ BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
 	//std::cout << "Model max bound: " << node->bounds.max[0] << " " << node->bounds.max[1] << " " << node->bounds.max[2] << std::endl;
 
 
-	if (triangles.size() <= 16) {
+	if (triangles.size() <= 25) {
 		//std::cout << "Too depth or too small." << std::endl;
 		node->triangles = std::move(triangles);
 		return node;
@@ -42,13 +42,13 @@ BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
 	if (extent[2] > extent[axis])
 		axis = 2;
 	std::sort(triangles.begin(), triangles.end(),
-		[axis](const Triangle& a, const Triangle& b) -> bool {
+		[axis](Triangle a, Triangle b) -> bool {
 			return a.centroid[axis] < b.centroid[axis];
 		});
 
 	size_t mid = triangles.size() / 2;
-	std::vector< Triangle> leftModels(triangles.begin(), triangles.begin() + mid);
-	std::vector< Triangle> rightModels(triangles.begin() + mid, triangles.end());
+	std::vector<Triangle> leftModels(triangles.begin(), triangles.begin() + mid);
+	std::vector<Triangle> rightModels(triangles.begin() + mid, triangles.end());
 
 	node->left = build(leftModels, depth + 1);
 	node->right = build(rightModels, depth + 1);

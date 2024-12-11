@@ -248,7 +248,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // ¼ÓÔØ±ä»»¾ØÕó
             pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
             std::string matrixValueRect = matrixNode.attribute("value").as_string();
-            glm::vec3 center = { -5 , 16 , -25 };
+            glm::vec3 center = { -6 , 15 , -25 };
             glm::mat3 rotation = { {4.51251, 0, 0}, {0, 5.3468, 6.49714e-008}, {0, 6.49714e-008, 3.86042} };
             rotation = glm::transpose(rotation);
 

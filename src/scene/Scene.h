@@ -19,7 +19,6 @@ public:
     Camera camera;
     std::vector<std::shared_ptr<Model>> models;
     std::vector<Triangle> triangles;
-    
 };
 
 #endif // SCENE_H

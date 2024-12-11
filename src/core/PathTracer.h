@@ -20,6 +20,8 @@
 #include <mutex>
 #include <cmath>
 #include <queue>
+#include "../utils/Profile.h"
+
 struct Task {
 	int xStart;
 	int xEnd;
@@ -48,10 +50,10 @@ public:
 					task_queue.emplace(task);
 				}
 				condition.notify_one();
-				{
-					std::lock_guard<std::mutex> lock(cout_mutex);
-					std::cout << "Finish adding task (" << x << ", " << y << ")\n";
-				}
+				//{
+				//	std::lock_guard<std::mutex> lock(cout_mutex);
+					//std::cout << "Finish adding task (" << x << ", " << y << ")\n";
+				//}
 			}
 		}
 		{

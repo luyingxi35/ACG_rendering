@@ -2,8 +2,8 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 16;
-const float P = 0.6;
+const int MAX_BOUNCES = 16 ;
+const float P = 0.66666;
 
 //point light
 /*bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& result_light, Intersection& intersection) {
@@ -725,17 +725,18 @@ void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh
                 glm::vec3 pixel_radiance(0.0f, 0.0f, 0.0f);
 
                 for (int i = 0; i < samplesPerPixel; i++) {
+                    //PROFILE("sample one pixel")
                     glm::vec3 sample_direction = generateSample(camera, x, y, width, height, gen);
                     Ray ray = { camera.position, sample_direction };
                     glm::vec3 color_mid = tracePath(ray, scene, bvh, 0, gen);
                     pixel_radiance += color_mid * (1.0f / static_cast<float>(samplesPerPixel));
                 }
-                if (y >= 100) {
-                    {
-                        std::lock_guard<std::mutex> lock(cout_mutex);
-                        std::cout << "Finish render pixel: (" << x << ", " << y << ")\n";
-                    }
-                }
+                //if (y >= 100) {
+                  //  {
+                    //    std::lock_guard<std::mutex> lock(cout_mutex);
+                      //  std::cout << "Finish render pixel: (" << x << ", " << y << ")\n";
+                    //}
+                //}
 
                 framebuffer[y * width + x] += pixel_radiance;
             }
@@ -747,13 +748,14 @@ void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh
 void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
     int width, int height, int samplesPerPixel,
     int numThreads) {
+    PROFILE("Render 1280x720 64spp")
     // 确保 framebuffer 大小正确
     std::vector<glm::vec3> framebuffer(width * height, glm::vec3(0.0f));
     std::vector<std::thread> threadPool;
 
-    const int xtileSize = 32;
-    const int ytileSize = 18;
-    std::cout << "xtileSize: " << xtileSize << "ytileSize: " << ytileSize << std::endl;
+    const int xtileSize = 16;
+    const int ytileSize = 9;
+    //std::cout << "xtileSize: " << xtileSize << "ytileSize: " << ytileSize << std::endl;
 
     std::vector<unsigned int> seeds(numThreads);
     std::mt19937 rd_gen(std::random_device{}());

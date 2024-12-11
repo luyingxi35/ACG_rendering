@@ -2,6 +2,7 @@
 #define BVH_H
 #include "../scene/Scene.h"
 #include "../core/Intersection.h"
+#include "../utils/Profile.h"
 
 struct AABB {
 	glm::vec3 min, max;
@@ -37,7 +38,7 @@ struct BVHNode {
 	BVHNode* right = nullptr;    // right subtree
 
 	bool isLeaf() const {
-		return left == nullptr && right == nullptr;
+		return (triangles.size() <= 25);
 	}
 };
 
@@ -45,7 +46,7 @@ class BVH {
 private:
 	BVHNode* root;
 	BVHNode* build(std::vector<Triangle> triangles, int depth);
-	AABB computeBounds(std::vector<Triangle>& triangles);
+	AABB computeBounds(std::vector<Triangle> triangles);
 	bool intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t);
 	void destroy(BVHNode* node) {
 		if (!node) return;
@@ -55,8 +56,9 @@ private:
 	}
 public:
 	BVH(const Scene& scene) {
-		std::vector<Triangle> triangles = scene.triangles;
-		root = build(triangles, 0);
+		PROFILE("Build BVH tree")
+		//std::vector<Triangle> triangles = scene.triangles;
+ 		root = build(scene.triangles, 0);
 		std::cout << "Finish build the BVH tree." << std::endl;
 		std::cout << "Root: " << root->bounds.min[0] << ", " << root->bounds.min[1] << ", " << root->bounds.min[0] << ", " << "   "
 			<< root->bounds.max[0] << ", " << root->bounds.max[1] << ", " << root->bounds.max[2] << std::endl;
