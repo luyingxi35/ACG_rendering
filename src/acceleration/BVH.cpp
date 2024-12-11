@@ -1,7 +1,7 @@
 #include "BVH.h"
 
 AABB boundingBox(Triangle triangle) {
-			glm::vec3 v0 = triangle.v0;
+	glm::vec3 v0 = triangle.v0;
 	glm::vec3 v1 = triangle.v1;
 	glm::vec3 v2 = triangle.v2;
 	glm::vec3 min = { std::min({v0.x, v1.x, v2.x}), std::min({v0.y, v1.y, v2.y}), std::min({v0.z, v1.z, v2.z}) };
@@ -9,7 +9,7 @@ AABB boundingBox(Triangle triangle) {
 	return { min, max };
 }
 
-AABB BVH::computeBounds(std::vector<Triangle> triangles) {
+AABB BVH::computeBounds(const std::vector<Triangle>& triangles) {
 	glm::vec3 min = glm::vec3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 	glm::vec3 max = glm::vec3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 	for (auto triangle : triangles) {
@@ -23,6 +23,7 @@ AABB BVH::computeBounds(std::vector<Triangle> triangles) {
 
 BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
 	if (triangles.empty()) return nullptr;
+	//std::cout << "triangles size: " << triangles.size() << std::endl;
 
 	BVHNode* node = new BVHNode();
 	node->bounds = computeBounds(triangles);
@@ -30,9 +31,10 @@ BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
 	//std::cout << "Model max bound: " << node->bounds.max[0] << " " << node->bounds.max[1] << " " << node->bounds.max[2] << std::endl;
 
 
-	if (triangles.size() <= 25) {
+	if (triangles.size() <= 50) {
 		//std::cout << "Too depth or too small." << std::endl;
-		node->triangles = std::move(triangles);
+		node->triangles = triangles;
+		assert(triangles.size() != 0);
 		return node;
 	}
 	glm::vec3 extent = node->bounds.max - node->bounds.min;
@@ -41,19 +43,22 @@ BVHNode* BVH::build(std::vector<Triangle> triangles, int depth) {
 		axis = 1;
 	if (extent[2] > extent[axis])
 		axis = 2;
+	
+	//std::cout << "triangels szie " << triangles.size() << std::endl;
 	std::sort(triangles.begin(), triangles.end(),
 		[axis](Triangle a, Triangle b) -> bool {
 			return a.centroid[axis] < b.centroid[axis];
 		});
-
+	//std::cout << "Triangles size: " << node->triangles.size() << std::endl;
 	size_t mid = triangles.size() / 2;
 	std::vector<Triangle> leftModels(triangles.begin(), triangles.begin() + mid);
+	//std::cout << "begin - modelbegin:" << triangles.begin() - leftModels.begin() << std::endl;
 	std::vector<Triangle> rightModels(triangles.begin() + mid, triangles.end());
 
 	node->left = build(leftModels, depth + 1);
 	node->right = build(rightModels, depth + 1);
 	//std::cout << "depth: " << depth << std::endl;
-
+	//std::cout << "Triangle size: " << node->triangles.size() << std::endl;
 	return node;
 }
 bool BVH::intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t) {

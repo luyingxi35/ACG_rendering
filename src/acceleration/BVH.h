@@ -3,6 +3,8 @@
 #include "../scene/Scene.h"
 #include "../core/Intersection.h"
 #include "../utils/Profile.h"
+#include <assert.h>
+#include <algorithm>
 
 struct AABB {
 	glm::vec3 min, max;
@@ -38,7 +40,7 @@ struct BVHNode {
 	BVHNode* right = nullptr;    // right subtree
 
 	bool isLeaf() const {
-		return (triangles.size() <= 25);
+		return left == nullptr && right == nullptr;
 	}
 };
 
@@ -46,7 +48,7 @@ class BVH {
 private:
 	BVHNode* root;
 	BVHNode* build(std::vector<Triangle> triangles, int depth);
-	AABB computeBounds(std::vector<Triangle> triangles);
+	AABB computeBounds(const std::vector<Triangle>& triangles);
 	bool intersectNode(BVHNode* node, Ray& ray, Intersection& intersection, float& t);
 	void destroy(BVHNode* node) {
 		if (!node) return;
