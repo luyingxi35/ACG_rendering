@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 8;
+const int MAX_BOUNCES = 16;
 const float P = 0.66666;
 
 //point light
@@ -753,8 +753,8 @@ void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
     std::vector<glm::vec3> framebuffer(width * height, glm::vec3(0.0f));
     std::vector<std::thread> threadPool;
 
-    const int xtileSize = 16;
-    const int ytileSize = 9;
+    const int xtileSize = width / 10;
+    const int ytileSize = height / 10;
     //std::cout << "xtileSize: " << xtileSize << "ytileSize: " << ytileSize << std::endl;
 
     std::vector<unsigned int> seeds(numThreads);
