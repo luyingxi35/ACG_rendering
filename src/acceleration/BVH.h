@@ -10,7 +10,7 @@
 struct AABB {
 	glm::vec3 min, max;
 
-	bool intersect(Ray& ray, float tMin, float tMax, glm::vec3 invD) {
+	bool intersect(Ray& ray, float tMin, float tMax) {
 
 		for (int i = 0; i < 3; ++i) {
 			if (fabs(ray.direction[i]) < 1e-8f) { // 方向分量接近零
@@ -18,9 +18,10 @@ struct AABB {
 					return false; // parallel
 				}
 			}
-			float t0 = (min[i] - ray.position[i]) * invD[i];
-			float t1 = (max[i] - ray.position[i]) * invD[1];
-			if (invD[i] < 0.0) std::swap(t0, t1);
+			float invD = 1.0f / ray.direction[i];
+			float t0 = (min[i] - ray.position[i]) * invD;
+			float t1 = (max[i] - ray.position[i]) * invD;
+			if (invD < 0.0) std::swap(t0, t1);
 			//std::cout << "t0: " << t0 << std::endl;
 			//std::cout << "t1: " << t1 << std::endl;
 			tMin = std::max(tMin, t0);

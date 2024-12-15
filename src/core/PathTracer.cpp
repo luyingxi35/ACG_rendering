@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 4;
+const int MAX_BOUNCES = 8;
 const float P = 0.66666;
 
 //point light
