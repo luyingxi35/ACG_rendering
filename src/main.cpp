@@ -19,7 +19,7 @@ int main() {
     BVH bvh(scene);
 
     // rendering the scene and output the picture
-    pathTracer.render(scene, scene.camera, bvh, 320, 180, 16, 8);  
+    pathTracer.render(scene, scene.camera, bvh, 160, 90, 4, 16);  
 
     std::cout << "Rendering complete!" << std::endl;
     return 0;
