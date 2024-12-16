@@ -42,6 +42,40 @@ glm::vec3 sampleAreaLight(const Light& light, int sampleIndex, int totalSamples)
     return sampledPoint;
 }
 
+//从计算出的 mipmap 层中，根据 UV 坐标获取像素值。
+glm::vec3 sampleMipmapTexture(std::shared_ptr<MipmapTexture> texture, const glm::vec2& uv, int mipLevel) {
+    const std::vector<unsigned char>& data = texture->mipLevels[mipLevel];
+    int width = texture->widths[mipLevel];
+    int height = texture->heights[mipLevel];
+    int channels = texture->channels;
+
+    // 将 UV 转换为纹理坐标，并确保其在 [0, 1] 范围内
+    float u = glm::clamp(uv.x, 0.0f, 1.0f) * (width - 1);
+    float v = glm::clamp(uv.y, 0.0f, 1.0f) * (height - 1);
+    int x = static_cast<int>(u);
+    int y = static_cast<int>(v);
+
+    // 线性插值采样
+    float uRatio = u - x;
+    float vRatio = v - y;
+
+    glm::vec3 color(0.0f);
+    for (int i = 0; i < channels; ++i) {
+        int index1 = (y * width + x) * channels + i;
+        int index2 = (y * width + (x + 1)) * channels + i;
+        int index3 = ((y + 1) * width + x) * channels + i;
+        int index4 = ((y + 1) * width + (x + 1)) * channels + i;
+
+        float value = (data[index1] * (1 - uRatio) + data[index2] * uRatio) * (1 - vRatio) +
+            (data[index3] * (1 - uRatio) + data[index4] * uRatio) * vRatio;
+
+        color[i] = value / 255.0f; // 转换为 0-1 范围
+    }
+
+    return color;
+}
+
+
 // 漫反射光照
 glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen) {
     glm::vec3 diffuseColor(0.0f, 0.0f, 0.0f);
@@ -94,8 +128,22 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                 // float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
                 // lightContribution += intersection.material().diffuseReflect * diff * attenuation * light.color;
 
+                //texture mapping
+				if (intersection.material().IsTexture) {
+                    std::cout << "Texture loaded!" << std::endl;
+                }
+                if (intersection.material().IsTexture) {
+                    glm::vec2 uv = intersection.uv();
+                    int mipLevel = std::clamp(intersection.mipLevel(), 0, static_cast<int>(intersection.material().texture->mipLevels.size()) - 1);
+                    glm::vec3 textureColor = sampleMipmapTexture(intersection.material().texture, uv, mipLevel);
+                    intersection.material().diffuseReflect = textureColor;
+					std::cout << "textureColor: " << textureColor[0] << ", " << textureColor[1] << ", " << textureColor[2] << std::endl;
+                    
+                }
+
                 // compute BRDF (Lambertian)
                 glm::vec3 brdf = intersection.material().diffuseReflect;
+				//std::cout << "brdf: " << brdf[0] << ", " << brdf[1] << ", " << brdf[2] << std::endl;
                  // compute PDF for area light sampling (uniform over area)
                 float area = glm::length(glm::cross(light.u, light.v));
                 float pdf = 1.0f / area;
@@ -140,6 +188,13 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
             //float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
             //diffuseColor += intersection.material().diffuseReflect * diff * lightIntensity * light.color;
 
+            //texture mapping
+            glm::vec2 uv = intersection.uv();
+            if (intersection.material().IsTexture) {
+                int mipLevel = std::clamp(intersection.mipLevel(), 0, static_cast<int>(intersection.material().texture->mipLevels.size()) - 1);
+                glm::vec3 textureColor = sampleMipmapTexture(intersection.material().texture, uv, mipLevel);
+                intersection.material().diffuseReflect = textureColor;
+            }
              // Compute BRDF (Lambertian)
             glm::vec3 brdf = intersection.material().diffuseReflect;
 
@@ -563,6 +618,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         const Material material_intersect = intersection_scene.material();
         glm::vec3 position_new = intersection_scene.point();
         glm::vec3 normal = intersection_scene.normal();
+		glm::vec2 uv = intersection_scene.uv();
 
         // 处理双面材质
         if (material_intersect.twoSided && glm::dot(ray.direction, normal) > 0) {
@@ -634,10 +690,10 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             }
         }
     }
-    // else {
-    //     // 背景颜色，可选
-    //     // result_color += bg_color;
-    // }
+     /*else {*/
+          //背景颜色，可选
+          //result_color += glm::vec3(125, 100, 75);
+     //}
 
     return result_color;
 }

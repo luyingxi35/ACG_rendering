@@ -9,10 +9,12 @@ Intersection::Intersection(bool hit, float t, const glm::vec3& point, const glm:
     : hit_(hit), t_(t), point_(point), normal_(normal), material_(material) {}
 
 // 设置交点信息
-void Intersection::set(const float t, const glm::vec3& point, const glm::vec3& normal, Material material) {
+void Intersection::set(const float t, const glm::vec3& point, const glm::vec3& normal, Material material, const glm::vec2& uv, int& mipLevel) {
     hit_ = true;
     t_ = t;
     point_ = point;
     normal_ = normal;
+    uv_ = uv;
     material_ = material;
+    mipLevel_ = mipLevel;
 }

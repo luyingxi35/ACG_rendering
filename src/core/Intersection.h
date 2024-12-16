@@ -25,15 +25,23 @@ public:
     // 获取交点的材质
     Material material() { return material_; }
 
+	// 获取交点的纹理坐标
+	glm::vec2 uv() { return uv_; }
+
+	// 获取交点的mipmap层级
+	int mipLevel() { return mipLevel_; }
+
     // 更新交点信息
-    void set(const float t, const glm::vec3& point, const glm::vec3& normal, Material material);
+    void set(const float t, const glm::vec3& point, const glm::vec3& normal, Material material, const glm::vec2& uv, int& mipLevel);
 
 private:
     bool hit_;           // 是否有交点
     float t_;
     glm::vec3 point_;      // 交点位置
     glm::vec3 normal_;     // 交点的法线
+	glm::vec2 uv_;         // 交点的纹理坐标
     Material material_; // 交点的材质
+    int mipLevel_;
 };
 
 #endif // INTERSECTION_H

@@ -145,14 +145,16 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 		else {
 			float tTri = 1e7;
 			glm::vec3 normal = { 0.0,0.0,0.0 };
+			glm::vec2 uv = { 0.0,0.0 };
 			Material material = Material();
+			int mipLevel = 0;
 			auto triangle_iter = ordered_triangles.begin() + node.triangle_index;
 			for (int i = 0; i < node.tri_count; i++) {
-				if (triangle_iter->intersect(ray, tTri, normal) && tTri > tMin && tTri < tMax) {
+				if (triangle_iter->intersect(ray, tTri, normal, uv, mipLevel) && tTri > tMin && tTri < tMax) {
 					tMax = tTri;
 					hit = true;
 					material = triangle_iter->material;
-					intersection.set(tTri, ray.position + tTri * ray.direction, normal, material);
+					intersection.set(tTri, ray.position + tTri * ray.direction, normal, material, uv, mipLevel);
 				}
 				triangle_iter++;
 			}

@@ -9,6 +9,7 @@
 #include <assimp/texture.h>
 #include "../core/Material.h"
 #include "../core/Color.h"
+#include "../core/Texture.h"
 #include "../utils/definition.h"
 #include "stb_image.h"
 
@@ -27,14 +28,14 @@ public:
 
     void loadModelFromFile(const std::string& path);
     std::vector<ModelMesh> meshes;
-    std::vector<GLuint> textures;  // 存储纹理
     std::vector<Triangle> triangles;
     glm::mat4 transformToWorld;
-    Material material;
+	Material material; //纹理在material中
 private:
-    GLuint loadTextureFromFile(const std::string& texturePath); // 处理纹理加载
+    //GLuint loadTextureFromFile(const std::string& texturePath); // 处理纹理加载
     void processNode(aiNode* node, const aiScene* scene);
     void processMesh(aiMesh* mesh, const aiScene* scene);
+    //MipmapTexture loadTextureAndGenerateMipmap(const std::string& texturePath);
 };
 
 #endif // MODEL_H

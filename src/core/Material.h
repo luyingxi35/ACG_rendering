@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
+#include "./Texture.h"
+
 // Material types
 enum class MaterialType {
 	Diffuse,
@@ -12,6 +14,7 @@ enum class MaterialType {
 	RoughConductor,
 	RoughPlastic
 };
+
 class Material {
 public:
 	Material() {
@@ -26,6 +29,8 @@ public:
 		this->k = glm::vec3(0.0f);
 		this->nonlinear = false;
 		this->emission = glm::vec3(0.0f);
+		this->IsTexture = false;
+		this->texture = nullptr;
 	};
 	~Material() {};
 	MaterialType type;
@@ -39,6 +44,8 @@ public:
 	glm::vec3 k;  //for conductor
 	bool nonlinear;  //是否非线性
 	glm::vec3 emission;  // 发光颜色
+	bool IsTexture;
+	std::shared_ptr<MipmapTexture> texture; // 使用智能指针管理纹理资源
 };
 
 #endif // !MATERIAL_H
