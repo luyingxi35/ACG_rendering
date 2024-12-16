@@ -53,12 +53,12 @@ BVHTreeNode* BVH::buildTree(std::vector<Triangle> triangles, int depth) {
 		});
 	//std::cout << "Triangles size: " << node->triangles.size() << std::endl;
 	size_t mid = triangles.size() / 2;
-	std::vector<Triangle> leftModels(triangles.begin(), triangles.begin() + mid);
+	std::vector<Triangle> leftTri(triangles.begin(), triangles.begin() + mid);
 	//std::cout << "begin - modelbegin:" << triangles.begin() - leftModels.begin() << std::endl;
-	std::vector<Triangle> rightModels(triangles.begin() + mid, triangles.end());
+	std::vector<Triangle> rightTri(triangles.begin() + mid, triangles.end());
 
-	node->left = buildTree(leftModels, depth + 1);
-	node->right = buildTree(rightModels, depth + 1);
+	node->left = buildTree(leftTri, depth + 1);
+	node->right = buildTree(rightTri, depth + 1);
 	//std::cout << "depth: " << depth << std::endl;
 	//std::cout << "Triangle size: " << node->triangles.size() << std::endl;
 	return node;
@@ -116,6 +116,7 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 		ray.direction.y < 0,
 		ray.direction.z < 0,
 	};
+	//glm::vec3 inv_dir = 1.0f / ray.direction;
 
 	std::array<int, 32> stack;
 	auto ptr = stack.begin();

@@ -360,7 +360,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 0.5f; // 根据需要调整强度
+                    light.intensity = 1.0f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
 

@@ -804,13 +804,13 @@ void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh
 void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
     int width, int height, int samplesPerPixel,
     int numThreads) {
-    PROFILE("Render 1280x720 64spp")
+    PROFILE("Render " + std::to_string(width) + "x" + std::to_string(height) + " " +  std::to_string(samplesPerPixel) + "spp ")
     // 确保 framebuffer 大小正确
     std::vector<glm::vec3> framebuffer(width * height, glm::vec3(0.0f));
     std::vector<std::thread> threadPool;
 
-    const int xtileSize = 16;
-    const int ytileSize = 9;
+    const int xtileSize = width / 10;
+    const int ytileSize = height / 10;
     //std::cout << "xtileSize: " << xtileSize << "ytileSize: " << ytileSize << std::endl;
 
     std::vector<unsigned int> seeds(numThreads);
