@@ -32,35 +32,82 @@ BVHTreeNode* BVH::buildTree(std::vector<Triangle> triangles, int depth) {
 	//std::cout << "Model max bound: " << node->bounds.max[0] << " " << node->bounds.max[1] << " " << node->bounds.max[2] << std::endl;
 
 
-	if (triangles.size() <= 50) {
+	if (triangles.size() <= 50 || depth > 32) {
 		//std::cout << "Too depth or too small." << std::endl;
 		node->triangles = triangles;
-		assert(triangles.size() != 0);
 		return node;
 	}
-	glm::vec3 extent = node->bounds.max - node->bounds.min;
-	node->splitAxis = 0;
-	if (extent[1] > extent[0])
-		node->splitAxis = 1;
-	if (extent[2] > extent[node->splitAxis])
-		node->splitAxis = 2;
-	
-	int axis = node->splitAxis;
-	//std::cout << "triangels szie " << triangles.size() << std::endl;
-	std::sort(triangles.begin(), triangles.end(),
-		[axis](const Triangle& a, const Triangle& b) -> bool {
-			return a.centroid[axis] < b.centroid[axis];
-		});
-	//std::cout << "Triangles size: " << node->triangles.size() << std::endl;
-	size_t mid = triangles.size() / 2;
-	std::vector<Triangle> leftTri(triangles.begin(), triangles.begin() + mid);
-	//std::cout << "begin - modelbegin:" << triangles.begin() - leftModels.begin() << std::endl;
-	std::vector<Triangle> rightTri(triangles.begin() + mid, triangles.end());
 
-	node->left = buildTree(leftTri, depth + 1);
-	node->right = buildTree(rightTri, depth + 1);
-	//std::cout << "depth: " << depth << std::endl;
-	//std::cout << "Triangle size: " << node->triangles.size() << std::endl;
+	glm::vec3 diag = node->bounds.max - node->bounds.min;
+	float min_cost = std::numeric_limits<float>::infinity();
+	int min_split_index = 0;
+	AABB min_left_bounds, min_right_bounds;
+	int min_left_triangle_count = 0, min_right_triangle_count = 0;
+	const int bucket_count = 12;
+	std::vector<int> triangle_indices_bucket[3][bucket_count];
+
+	for (int axis = 0; axis < 3; axis++) {
+		AABB bounds_buckets[bucket_count] = {};
+		int triangle_count_buckets[bucket_count] = {};
+		int triangle_index = 0;
+		for (const auto& triangle : triangles) {
+			auto triangle_center = triangle.centroid[axis];
+			int bucket_idx = glm::clamp<int>(glm::floor((triangle_center - node->bounds.min[axis]) * bucket_count / diag[axis]), 0, bucket_count - 1);
+			bounds_buckets[bucket_idx].expand(triangle.bounding_box);
+			triangle_count_buckets[bucket_idx]++;
+			triangle_indices_bucket[axis][bucket_idx].push_back(triangle_index);
+			triangle_index++;
+		}
+
+		AABB left_bounds = bounds_buckets[0];
+		int left_triangle_count = triangle_count_buckets[0];
+		for (int i = 1; i < bucket_count; i++) {
+			AABB right_bounds;
+			int right_triangle_count = 0;
+			for (int j = bucket_count - 1; j > i; j--) {
+				right_bounds.expand(bounds_buckets[j]);
+				right_triangle_count += triangle_count_buckets[j];
+			}
+			if (right_triangle_count == 0) {
+				break;
+			}
+			if (left_triangle_count != 0) {
+				float cost = left_triangle_count * left_bounds.surfaceArea() + right_triangle_count * right_bounds.surfaceArea();
+				if (cost < min_cost) {
+					min_cost = cost;
+					node->splitAxis = axis;
+					min_split_index = i;
+					min_left_bounds = left_bounds;
+					min_right_bounds = right_bounds;
+					min_left_triangle_count = left_triangle_count;
+					min_right_triangle_count = right_triangle_count;
+				}
+			}
+			left_bounds.expand(bounds_buckets[i]);
+			left_triangle_count += triangle_count_buckets[i];
+		}
+	}
+
+	if (min_split_index == 0) {
+		node->triangles = triangles;
+		return node;
+	}
+
+	std::vector<Triangle> left_triangles, right_triangles;
+	for (int i = 0; i < min_split_index; i++) {
+		for (auto triangle_index : triangle_indices_bucket[node->splitAxis][i]) {
+			left_triangles.push_back(triangles[triangle_index]);
+		}
+	}
+	for (int i = min_split_index; i < bucket_count; i++) {
+		for (auto triangle_index : triangle_indices_bucket[node->splitAxis][i]) {
+			right_triangles.push_back(triangles[triangle_index]);
+		}
+	}
+
+	node->left = buildTree(left_triangles, depth + 1);
+	node->right = buildTree(right_triangles, depth + 1);
+
 	return node;
 }
 
@@ -87,29 +134,6 @@ int BVH::flattenTree(BVHTreeNode* node) {
 }
 
 bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
-	/*if (!node || !node->bounds.intersect(ray, tMin, tMax)) {
-		//std::cout << "Not itersect with bounds." << std::endl;
-		return false;
-	}
-	if (node->isLeaf()) {
-		//std::cout << "Leaf: ";
-		bool hit = false;
-		Material material = Material();
-		for (auto& triangle : node->triangles) {
-			float tTri = 1e7;
-			glm::vec3 normal = { 0.0,0.0,0.0 };
-			if (triangle.intersect(ray, tTri, normal) && tTri > tMin && tTri < t) {
-				t = tTri;
-				hit = true;
-				material = triangle.material;
-				intersection.set(t, ray.position + t * ray.direction, normal, material);
-			}
-		}
-		return hit;
-	}
-	bool hitLeft = intersectNode(node->left, ray, intersection, t);
-	bool hitRight = intersectNode(node->right, ray, intersection, t);
-	return hitLeft || hitRight;*/
 
 	glm::bvec3 dir_is_neg = {
 		ray.direction.x < 0,

@@ -140,23 +140,14 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         return;
     }
 
-    // Extract lights
-    for (pugi::xml_node lightNode : doc.child("scene").children("light")) {
-        Light light;
-        light.position = glm::vec3(
-            lightNode.child("position").attribute("x").as_float(),
-            lightNode.child("position").attribute("y").as_float(),
-            lightNode.child("position").attribute("z").as_float()
-        );
-        light.color = glm::vec3(
-            lightNode.child("color").attribute("r").as_float(),
-            lightNode.child("color").attribute("g").as_float(),
-            lightNode.child("color").attribute("b").as_float()
-        );
-        light.intensity = lightNode.child("intensity").text().as_float();
-        lights.push_back(light);
-    }
-    std::cout << "Finish adding lights." << std::endl;
+    Light light_point;
+    light_point.position = { 0.0f, 33.0f, 0.0f };
+    light_point.u = glm::vec3(0.0f);
+    light_point.v = glm::vec3(0.0f);
+    light_point.intensity = 0.5f;
+    light_point.color = { 125, 100, 75 };
+	light_point.samples = 32;
+    lights.push_back(light_point);
 
     // Extract camera
     pugi::xml_node cameraNode = doc.child("scene").child("sensor");
@@ -257,8 +248,8 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 定义单位矩形的四个顶点
             glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
             glm::vec3 v1 = glm::vec3(10.0f, 0.0f, 0.0f);
-            glm::vec3 v2 = glm::vec3(10.0f, 15.0f, 0.0f);
-            glm::vec3 v3 = glm::vec3(0.0f, 15.0f, 0.0f);
+            glm::vec3 v2 = glm::vec3(10.0f, 9.5f, 0.0f);
+            glm::vec3 v3 = glm::vec3(0.0f, 9.5f, 0.0f);
 
             // 应用变换矩阵
             v0 = v0 + center;

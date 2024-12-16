@@ -572,7 +572,8 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         // 如果交点是一个发光体，累积其发光颜色
         if (glm::length(material_intersect.emission) > 1e-4) {
             // std::cout << "Intersect with area light!." << std::endl;
-            result_color = material_intersect.emission;
+            result_color += material_intersect.emission;
+			//std::cout << "Emission: " << material_intersect.emission[0] << " " << material_intersect.emission[1] << " " << material_intersect.emission[2] << std::endl;
             return result_color;
         }
 
