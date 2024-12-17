@@ -16,9 +16,7 @@ struct BVHTreeNode {
 	BVHTreeNode* right = nullptr;    // right subtree
 	int splitAxis = 0;              // split axis
 
-	bool isLeaf() const {
-		return left == nullptr && right == nullptr;
-	}
+	bool isLeaf = false;
 };
 
 struct BVHFlatNode {
@@ -29,6 +27,7 @@ struct BVHFlatNode {
 	};
 	int tri_count = 0;
 	int split_axis = 0;
+	bool isLeaf = false;
 };
 
 class BVH {
@@ -41,7 +40,7 @@ private:
 	BVHTreeNode* buildTree(std::vector<Triangle> triangles, int depth);
 	int flattenTree(BVHTreeNode* node);
 	AABB computeBounds(const std::vector<Triangle>& triangles);
-	//bool intersectNode(BVHTreeNode* node, Ray& ray, Intersection& intersection, float& t);
+	bool intersectNode(int node_index, Ray& ray, Intersection& intersection, float& t);
 	void destroy(BVHTreeNode* node) {
 		if (!node) return;
 		destroy(node->left);
@@ -57,7 +56,7 @@ public:
 		std::cout << "num_nodes: " << num_nodes << std::endl;
 		std::cout << "num_triangles: " << num_triangles << std::endl;
 		std::cout << "Finish build the BVH tree." << std::endl;
-		std::cout << "Root: " << root->bounds.min[0] << ", " << root->bounds.min[1] << ", " << root->bounds.min[0] << ", " << "   "
+		std::cout << "Root: " << root->bounds.min[0] << ", " << root->bounds.min[1] << ", " << root->bounds.min[2] << ", " << "   "
 			<< root->bounds.max[0] << ", " << root->bounds.max[1] << ", " << root->bounds.max[2] << std::endl;
 
 		nodes.reserve(num_nodes);
@@ -66,7 +65,7 @@ public:
 	}
 	~BVH() { destroy(root); }
 
-	bool intersect(Ray& ray, Intersection& intersection, float tMin, float tMax);
+	bool intersect(Ray& ray, Intersection& intersection, float& t) { return intersectNode(0, ray, intersection, t); }
 };
 #endif
 

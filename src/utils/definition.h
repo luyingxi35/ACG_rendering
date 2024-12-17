@@ -46,25 +46,19 @@ struct AABB {
 
     bool intersect(Ray& ray, float tMin, float tMax) {
 
-        for (int i = 0; i < 3; ++i) {
-            if (fabs(ray.direction[i]) < 1e-8f) { // 方向分量接近零
-                if (ray.position[i] < min[i] || ray.position[i] > max[i]) {
-                    return false; // parallel
-                }
-            }
-            float invD = 1.0f / ray.direction[i];
-            float t0 = (min[i] - ray.position[i]) * invD;
-            float t1 = (max[i] - ray.position[i]) * invD;
-            if (invD < 0.0) std::swap(t0, t1);
-            //std::cout << "t0: " << t0 << std::endl;
-            //std::cout << "t1: " << t1 << std::endl;
-            tMin = std::max(tMin, t0);
-            tMax = std::min(tMax, t1);
-            //std::cout << "tMin: " << tMin << std::endl;
-            //std::cout << "tMax: " << tMax << std::endl;
-            if (tMax <= tMin) return false;
+        glm::vec3 t1 = (min - ray.position) / ray.direction;
+        glm::vec3 t2 = (max - ray.position) / ray.direction;
+        glm::vec3 tmin = glm::min(t1, t2);
+        glm::vec3 tmax = glm::max(t1, t2);
+
+        float near = glm::max(tmin.x, glm::max(tmin.y, tmin.z));
+        float far = glm::min(tmax.x, glm::min(tmax.y, tmax.z));
+
+        if (near <= tMin && far >= tMax) {
+            return false;
         }
-        return true;
+
+        return glm::max(near, tMin) <= glm::min(far, tMax);
     }
 
     void expand(const AABB& aabb) {

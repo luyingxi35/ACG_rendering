@@ -140,14 +140,14 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         return;
     }
 
-    Light light_point;
+    /*Light light_point;
     light_point.position = { 0.0f, 33.0f, 0.0f };
     light_point.u = glm::vec3(0.0f);
     light_point.v = glm::vec3(0.0f);
     light_point.intensity = 0.5f;
     light_point.color = { 125, 100, 75 };
 	light_point.samples = 32;
-    lights.push_back(light_point);
+    lights.push_back(light_point);*/
 
     // Extract camera
     pugi::xml_node cameraNode = doc.child("scene").child("sensor");
@@ -165,60 +165,62 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     for (auto shapeNode : doc.child("scene").children("shape")) {
         if (std::string(shapeNode.attribute("type").value()) == "obj") {
             std::string path = shapeNode.child("string").attribute("value").as_string();
-            std::string filepath = "assets/";
-            filepath.append(path);
-            //std::cout << filepath << std::endl;
-            auto model = std::make_shared<Model>();
-            model->loadModelFromFile(filepath);
+            //if (path == "models/Mesh000.obj" || path == "models/Mesh001.obj" || path == "models/Mesh005.obj" || path == "models/Mesh008.obj" || path == "models/Mesh046.obj" || path == "models/Mesh045.obj" || path == "models/Mesh050.obj" || path == "models/Mesh052.obj") {
+                std::string filepath = "assets/";
+                filepath.append(path);
+                //std::cout << filepath << std::endl;
+                auto model = std::make_shared<Model>();
+                model->loadModelFromFile(filepath);
 
-            // Load material
-            auto materialRef = shapeNode.child("ref");
-            auto id = materialRef.attribute("id").as_string();
-            pugi::xml_node bsdf = doc.child("scene").find_child_by_attribute("bsdf", "id", id);
-            if (bsdf) {
-                model->material = extractMaterialFromBSDF(bsdf);
-            }
-            else {
-                std::cerr << "未找到 id 为 " << id << " 的 bsdf 节点。" << std::endl;
-            }
-            //std::cout << "Extracting BSDF Type: " << materialTypeToString(model->material.type) << std::endl;
-            //// 在提取每个属性后添加输出
-            //std::cout << "alpha: " << model->material.alpha << "specular_rate: " << model->material.specularReflect.x << ", eta: " << model->material.eta.x << ", " << model->material.eta.y << ", " << model->material.eta.z << ", int_ior: " << model->material.int_ior
-            //    << ", ext_ior: " << model->material.ext_ior << std::endl;
-
-            for (auto& mesh : model->meshes) {
-                for (size_t i = 0; i < mesh.indices.size() / 3; ++i) {
-                    glm::vec3& v0 = mesh.vertices[mesh.indices[i * 3]];
-                    glm::vec3& v1 = mesh.vertices[mesh.indices[i * 3 + 1]];
-                    glm::vec3& v2 = mesh.vertices[mesh.indices[i * 3 + 2]];
-
-                    Material material = model->material;
-                    Triangle triangle = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material);
-                    triangles.push_back(triangle);
-                    model->triangles.push_back(triangle);
-                    //std::cout << triangle.v0[0] << " " << triangle.v0[1] << " " << triangle.v0[2] << std::endl;
-                    //std::cout << triangle.v1[0] << " " << triangle.v1[1] << " " << triangle.v1[2] << std::endl;
-                    //std::cout << triangle.v2[0] << " " << triangle.v2[1] << " " << triangle.v2[2] << std::endl;
+                // Load material
+                auto materialRef = shapeNode.child("ref");
+                auto id = materialRef.attribute("id").as_string();
+                pugi::xml_node bsdf = doc.child("scene").find_child_by_attribute("bsdf", "id", id);
+                if (bsdf) {
+                    model->material = extractMaterialFromBSDF(bsdf);
                 }
-            }
-            //std::cout << "Finish loading triangles for model " << filepath << std::endl;
+                else {
+                    std::cerr << "未找到 id 为 " << id << " 的 bsdf 节点。" << std::endl;
+                }
+                //std::cout << "Extracting BSDF Type: " << materialTypeToString(model->material.type) << std::endl;
+                //// 在提取每个属性后添加输出
+                //std::cout << "alpha: " << model->material.alpha << "specular_rate: " << model->material.specularReflect.x << ", eta: " << model->material.eta.x << ", " << model->material.eta.y << ", " << model->material.eta.z << ", int_ior: " << model->material.int_ior
+                //    << ", ext_ior: " << model->material.ext_ior << std::endl;
+
+                for (auto& mesh : model->meshes) {
+                    for (size_t i = 0; i < mesh.indices.size() / 3; ++i) {
+                        glm::vec3& v0 = mesh.vertices[mesh.indices[i * 3]];
+                        glm::vec3& v1 = mesh.vertices[mesh.indices[i * 3 + 1]];
+                        glm::vec3& v2 = mesh.vertices[mesh.indices[i * 3 + 2]];
+
+                        Material material = model->material;
+                        Triangle triangle = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material);
+                        triangles.push_back(triangle);
+                        model->triangles.push_back(triangle);
+                        //std::cout << triangle.v0[0] << " " << triangle.v0[1] << " " << triangle.v0[2] << std::endl;
+                        //std::cout << triangle.v1[0] << " " << triangle.v1[1] << " " << triangle.v1[2] << std::endl;
+                        //std::cout << triangle.v2[0] << " " << triangle.v2[1] << " " << triangle.v2[2] << std::endl;
+                    }
+                }
+                //std::cout << "Finish loading triangles for model " << filepath << std::endl;
 
 
-            // Load transformToWorld
-            glm::mat4 transform;
-            auto matrixNode = shapeNode.child("transform").child("matrix");
-            std::string matrixValue = matrixNode.attribute("value").as_string();
-            //std::cout << matrixValue << std::endl;
-            sscanf_s(matrixValue.c_str(), "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
-                &transform[0][0], &transform[0][1], &transform[0][2], &transform[0][3],
-                &transform[1][0], &transform[1][1], &transform[1][2], &transform[1][3],
-                &transform[2][0], &transform[2][1], &transform[2][2], &transform[2][3],
-                &transform[3][0], &transform[3][1], &transform[3][2], &transform[3][3]);
-            model->transformToWorld = transform;
+                // Load transformToWorld
+                glm::mat4 transform;
+                auto matrixNode = shapeNode.child("transform").child("matrix");
+                std::string matrixValue = matrixNode.attribute("value").as_string();
+                //std::cout << matrixValue << std::endl;
+                sscanf_s(matrixValue.c_str(), "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+                    &transform[0][0], &transform[0][1], &transform[0][2], &transform[0][3],
+                    &transform[1][0], &transform[1][1], &transform[1][2], &transform[1][3],
+                    &transform[2][0], &transform[2][1], &transform[2][2], &transform[2][3],
+                    &transform[3][0], &transform[3][1], &transform[3][2], &transform[3][3]);
+                model->transformToWorld = transform;
 
 
 
-            addModel(model);
+                addModel(model);
+            //}
         }
 
         // handle rectangle
@@ -239,7 +241,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 加载变换矩阵
             pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
             std::string matrixValueRect = matrixNode.attribute("value").as_string();
-            glm::vec3 center = { -6 , 15 , -25 };
+            glm::vec3 center = { -6 , 15 , -24.9 };
             glm::mat3 rotation = { {4.51251, 0, 0}, {0, 5.3468, 6.49714e-008}, {0, 6.49714e-008, 3.86042} };
             rotation = glm::transpose(rotation);
 
@@ -247,9 +249,9 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
             // 定义单位矩形的四个顶点
             glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
-            glm::vec3 v1 = glm::vec3(10.0f, 0.0f, 0.0f);
-            glm::vec3 v2 = glm::vec3(10.0f, 9.5f, 0.0f);
-            glm::vec3 v3 = glm::vec3(0.0f, 9.5f, 0.0f);
+            glm::vec3 v1 = glm::vec3(9.5f, 0.0f, 0.0f);
+            glm::vec3 v2 = glm::vec3(9.5f, 13.0f, 0.0f);
+            glm::vec3 v3 = glm::vec3(0.0f, 13.0f, 0.0f);
 
             // 应用变换矩阵
             v0 = v0 + center;
@@ -270,7 +272,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 1.0f; // 根据需要调整强度
+                    light.intensity = 0.5f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
 

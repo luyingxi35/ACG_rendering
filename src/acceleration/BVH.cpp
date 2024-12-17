@@ -34,6 +34,7 @@ BVHTreeNode* BVH::buildTree(std::vector<Triangle> triangles, int depth) {
 
 	if (triangles.size() <= 50 || depth > 32) {
 		//std::cout << "Too depth or too small." << std::endl;
+		node->isLeaf = true;
 		node->triangles = triangles;
 		return node;
 	}
@@ -64,7 +65,7 @@ BVHTreeNode* BVH::buildTree(std::vector<Triangle> triangles, int depth) {
 		for (int i = 1; i < bucket_count; i++) {
 			AABB right_bounds;
 			int right_triangle_count = 0;
-			for (int j = bucket_count - 1; j > i; j--) {
+			for (int j = bucket_count - 1; j >= i; j--) {
 				right_bounds.expand(bounds_buckets[j]);
 				right_triangle_count += triangle_count_buckets[j];
 			}
@@ -89,6 +90,7 @@ BVHTreeNode* BVH::buildTree(std::vector<Triangle> triangles, int depth) {
 	}
 
 	if (min_split_index == 0) {
+		node->isLeaf = true;
 		node->triangles = triangles;
 		return node;
 	}
@@ -117,6 +119,7 @@ int BVH::flattenTree(BVHTreeNode* node) {
 		0,
 		static_cast<int>(node->triangles.size()),
 		node->splitAxis,
+		node->isLeaf,
 	};
 	auto idx = nodes.size();
 	nodes.push_back(bvh_node);
@@ -133,7 +136,7 @@ int BVH::flattenTree(BVHTreeNode* node) {
 	return idx;
 }
 
-bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
+/*bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
 
 	glm::bvec3 dir_is_neg = {
 		ray.direction.x < 0,
@@ -194,5 +197,35 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 		std::cout << "not hit\n";
 	}*/
 
-	return hit;
+	/*return hit;
+}*/
+bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, float& t) {
+	//std::cout << t;
+	float tMin = 0.0;
+	float tMax = t;
+	BVHFlatNode& node = nodes[node_idx];
+	if (!node.bounds.intersect(ray, tMin, tMax)) {
+		//std::cout << "Not itersect with bounds." << std::endl;
+		return false;
+	}
+	if (node.isLeaf) {
+		//std::cout << "Leaf: ";
+		bool hit = false;
+		Material material = Material();
+		for (int i = 0; i < node.tri_count; i++) {
+			float tTri = 1e7;
+			glm::vec3 normal = { 0.0,0.0,0.0 };
+			Triangle& triangle = ordered_triangles[node.triangle_index + i];
+			if (triangle.intersect(ray, tTri, normal) && tTri > tMin && tTri < t) {
+				t = tTri;
+				hit = true;
+				material = triangle.material;
+				intersection.set(t, ray.position + t * ray.direction, normal, material);
+			}
+		}
+		return hit;
+	}
+	bool hitLeft = intersectNode(node_idx + 1, ray, intersection, t);
+	bool hitRight = intersectNode(node.child1_index, ray, intersection, t);
+	return hitLeft || hitRight;
 }
