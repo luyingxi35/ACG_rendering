@@ -87,37 +87,33 @@ public:
     AABB bounding_box;
     
     bool intersect(const Ray& ray, float& t, glm::vec3& normal) {
-        glm::vec3 rayOrigin = ray.position;
-        glm::vec3 rayDir = glm::normalize(ray.direction);
         glm::vec3 e1 = v1 - v0;
-        glm::vec3 e2 = v2 - v0;
-        glm::vec3 n = glm::normalize(glm::cross(e1, e2));
+		glm::vec3 e2 = v2 - v0;
+		glm::vec3 h = glm::cross(ray.direction, e2);
+		float a = glm::dot(e1, h);
 
-        float denominator = glm::dot(rayDir, n);
-        if (denominator > -EPSILON && denominator < EPSILON)
+		if (a > -EPSILON && a < EPSILON) {
+			return false;
+		}
+
+        float f = 1.0f / a;
+		glm::vec3 s = ray.position - v0;
+        float u = f * glm::dot(s, h);
+        if (u < 0.0 || u > 1.0)
             return false;
 
-        float criteria = dot(v0 - rayOrigin, n) / denominator;
-        if (criteria < 0.0)
+		glm::vec3 q = glm::cross(s, e1);
+		float v = f * glm::dot(ray.direction, q);
+        if (v < 0.0 || u + v > 1.0)
             return false;
 
-        glm::vec3 s = rayOrigin - v0;
-        glm::vec3 s1 = glm::cross(rayDir, e2);
-        glm::vec3 s2 = glm::cross(s, e1);
-
-        float invDenom = 1.0 / glm::dot(s1, e1);
-        float b1 = dot(s1, s) * invDenom;
-        float b2 = dot(s2, rayDir) * invDenom;
-        t = dot(s2, e2) * invDenom;
-
-        if (t > 1e-6 && b1 >= 0.0 && b2 >= 0.0 && b1 + b2 <= 1.0) {
-            glm::vec3 position = rayOrigin + t * rayDir;
-            normal = n;
-            return true;
-        }
-        else {
-            return false;
-        }
+		float t_ = f * glm::dot(e2, q);
+		if (t_ > EPSILON) {
+			normal = glm::normalize(glm::cross(e1, e2));
+            t = t_;
+			return true;
+		}
+		return false;
     }
 
     // ¹¹Ôìº¯Êý
