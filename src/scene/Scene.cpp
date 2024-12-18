@@ -52,52 +52,35 @@ glm::vec3 extractRGB(pugi::xml_node bsdf, const std::string& name) {
     return glm::vec3(0.0f);
 }
 
-// 加载纹理并生成 Mipmap
-std::shared_ptr<MipmapTexture> loadTextureAndGenerateMipmap(const std::string& texturePath) {
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
+// 加载纹理
+std::shared_ptr<Texture> loadTexture(const std::string& texturePath) {
+    int width, height, Channels;
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
+    unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &Channels, 0);
 
     if (!data) {
         std::cerr << "Failed to load texture: " << texturePath << std::endl;
-        return nullptr;
     }
+    texture->data = data;
 
-	std::cout << "width: " << width << " height: " << height << " nrChannels: " << nrChannels << std::endl;
+    std::cout << "width: " << width << " height: " << height << " nrChannels: " << Channels << std::endl;
 
-    auto mipmap = std::make_shared<MipmapTexture>(); // 使用 shared_ptr 来管理 Mipmap 纹理
-    mipmap->mipLevels.push_back(std::vector<unsigned char>(data, data + width * height * nrChannels));
-    mipmap->widths.push_back(width);
-    mipmap->heights.push_back(height);
-    mipmap->channels = nrChannels;
+    //for (int y = 0; y < height; ++y) {
+    //    for (int x = 0; x < width; ++x) {
+    //        int index = (y * width + x) * Channels;  // 计算当前像素在数据中的索引
+    //        unsigned char r = data[index];
+    //        unsigned char g = data[index + 1];
+    //        unsigned char b = data[index + 2];
 
-    // 生成更低分辨率的 mipmap 层
-    while (width > 1 && height > 1) {
-        int newWidth = std::max(1, width / 2);
-        int newHeight = std::max(1, height / 2);
-        std::vector<unsigned char> newLevel(newWidth * newHeight * nrChannels);
+    //        std::cout << "Pixel (" << x << ", " << y << "): "
+    //            << "R=" << (int)r << ", G=" << (int)g << ", B=" << (int)b
+    //            << std::endl;
+    //    }
+    //}
 
-        for (int y = 0; y < newHeight; ++y) {
-            for (int x = 0; x < newWidth; ++x) {
-                for (int c = 0; c < nrChannels; ++c) {
-                    int srcX = x * 2, srcY = y * 2;
-                    unsigned char v1 = data[(srcY * width + srcX) * nrChannels + c];
-                    unsigned char v2 = data[(srcY * width + srcX + 1) * nrChannels + c];
-                    unsigned char v3 = data[((srcY + 1) * width + srcX) * nrChannels + c];
-                    unsigned char v4 = data[((srcY + 1) * width + srcX + 1) * nrChannels + c];
-                    newLevel[(y * newWidth + x) * nrChannels + c] = (v1 + v2 + v3 + v4) / 4;
-                }
-            }
-        }
-
-        mipmap->mipLevels.push_back(newLevel);
-        mipmap->widths.push_back(newWidth);
-        mipmap->heights.push_back(newHeight);
-        width = newWidth;
-        height = newHeight;
-    }
-
-    stbi_image_free(data); // 纹理数据加载完成后释放原始数据
-    return mipmap;
+	texture->width = width;  
+	texture->height = height;
+	return texture;
 }
 
 
@@ -159,9 +142,11 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
         if (texture) {
             if (std::string(texture.child("string").attribute("name").as_string()) == "filename") {
                 std::string textureFile = texture.child("string").attribute("value").as_string();
-                material.texture = loadTextureAndGenerateMipmap("assets/" + textureFile);
+                material.texture = loadTexture("assets/" + textureFile);
                 material.IsTexture = true;
-                std::cout << "Texture loaded: " << textureFile << std::endl;
+                if (material.texture != nullptr) {
+                    std::cout << "Texture loaded: " << textureFile << std::endl;
+                }
             }
         }
         else {
@@ -170,11 +155,15 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
     }
     else if (type == "diffuse") {
         material.type = MaterialType::Diffuse;
+        auto reflectance = target_bsdf.child("rgb");
+        if (reflectance) {
+            material.diffuseReflect = extractColor(reflectance.attribute("value").as_string());
+        }
         auto texture = target_bsdf.child("texture");
         if (texture) {
             if (std::string(texture.child("string").attribute("name").as_string()) == "filename") {
                 std::string textureFile = texture.child("string").attribute("value").as_string();
-                material.texture = loadTextureAndGenerateMipmap("assets/" + textureFile);
+                material.texture = loadTexture("assets/" + textureFile);
                 material.IsTexture = true;
                 std::cout << "Texture loaded: " << textureFile << std::endl;
                 if (material.texture == nullptr) {
@@ -360,7 +349,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 1.0f; // 根据需要调整强度
+                    light.intensity = 0.5f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
 

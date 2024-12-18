@@ -4,24 +4,21 @@
 #include "Color.h"
 #include <string>
 #include <vector>
+#include <memory>
 #include "stb_image.h"
 #include <iostream>
 
-//class Texture {
-//public:
-//    Texture(const std::string& filepath);
-//    Color getColorAt(float u, float v) const;
-//private:
-//    // 实际纹理数据（以某种方式加载纹理）
-//    unsigned char* data;
-//    int width, height;
-//};
 
-struct MipmapTexture {
-    std::vector<std::vector<unsigned char>> mipLevels; // 每层的纹理数据
-    std::vector<int> widths;                          // 每层纹理的宽度
-    std::vector<int> heights;                         // 每层纹理的高度
-    int channels;									 // 纹理通道数     
+class Texture {
+public:
+    unsigned char* data;  // 存储纹理的图像数据
+    int width, height;    // 纹理的宽度和高度
+
+    // 析构函数来释放纹理数据
+    ~Texture() {
+        if (data) {
+            stbi_image_free(data);
+        }
+    }
 };
-
 #endif // TEXTURE_H

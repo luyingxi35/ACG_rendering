@@ -18,7 +18,7 @@ struct AABB {
 					return false; // parallel
 				}
 			}
-			float invD = 1.0f / ray.direction[i];
+			float invD = 1.0 / ray.direction[i];
 			float t0 = (min[i] - ray.position[i]) * invD;
 			float t1 = (max[i] - ray.position[i]) * invD;
 			if (invD < 0.0) std::swap(t0, t1);

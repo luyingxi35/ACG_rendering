@@ -515,7 +515,7 @@
 		<ref id="WoodBSDF" />
 	</shape>
 	<shape type="obj" id="Wood_0002">
-		<string name="filename" value="models/Mesh005.obj" />
+		<string name="filename" value="models/Mesh005.obj" />  
 		<transform name="to_world">
 			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
 		</transform>

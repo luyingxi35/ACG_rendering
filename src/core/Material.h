@@ -45,7 +45,7 @@ public:
 	bool nonlinear;  //是否非线性
 	glm::vec3 emission;  // 发光颜色
 	bool IsTexture;
-	std::shared_ptr<MipmapTexture> texture; // 使用智能指针管理纹理资源
+	std::shared_ptr<Texture> texture; // 使用智能指针管理纹理资源
 };
 
 #endif // !MATERIAL_H

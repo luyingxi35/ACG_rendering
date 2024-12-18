@@ -53,12 +53,12 @@ BVHTreeNode* BVH::buildTree(std::vector<Triangle> triangles, int depth) {
 		});
 	//std::cout << "Triangles size: " << node->triangles.size() << std::endl;
 	size_t mid = triangles.size() / 2;
-	std::vector<Triangle> leftTri(triangles.begin(), triangles.begin() + mid);
+	std::vector<Triangle> leftModels(triangles.begin(), triangles.begin() + mid);
 	//std::cout << "begin - modelbegin:" << triangles.begin() - leftModels.begin() << std::endl;
-	std::vector<Triangle> rightTri(triangles.begin() + mid, triangles.end());
+	std::vector<Triangle> rightModels(triangles.begin() + mid, triangles.end());
 
-	node->left = buildTree(leftTri, depth + 1);
-	node->right = buildTree(rightTri, depth + 1);
+	node->left = buildTree(leftModels, depth + 1);
+	node->right = buildTree(rightModels, depth + 1);
 	//std::cout << "depth: " << depth << std::endl;
 	//std::cout << "Triangle size: " << node->triangles.size() << std::endl;
 	return node;
@@ -116,7 +116,6 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 		ray.direction.y < 0,
 		ray.direction.z < 0,
 	};
-	//glm::vec3 inv_dir = 1.0f / ray.direction;
 
 	std::array<int, 32> stack;
 	auto ptr = stack.begin();
@@ -151,11 +150,11 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 			int mipLevel = 0;
 			auto triangle_iter = ordered_triangles.begin() + node.triangle_index;
 			for (int i = 0; i < node.tri_count; i++) {
-				if (triangle_iter->intersect(ray, tTri, normal, uv, mipLevel) && tTri > tMin && tTri < tMax) {
+				if (triangle_iter->intersect(ray, tTri, normal, uv) && tTri > tMin && tTri < tMax) {
 					tMax = tTri;
 					hit = true;
 					material = triangle_iter->material;
-					intersection.set(tTri, ray.position + tTri * ray.direction, normal, material, uv, mipLevel);
+					intersection.set(tTri, ray.position + tTri * ray.direction, normal, material, uv);
 				}
 				triangle_iter++;
 			}
