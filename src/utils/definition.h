@@ -82,11 +82,12 @@ struct AABB {
 class Triangle {
 public:
     glm::vec3 v0, v1, v2; // 三个顶点
+    glm::vec2 vt0, vt1, vt2; // 三个纹理坐标
     Material material;
     glm::vec3 centroid;
     AABB bounding_box;
     
-    bool intersect(const Ray& ray, float& t, glm::vec3& normal) {
+    bool intersect(const Ray& ray, float& t, glm::vec3& normal, glm::vec2& uv) {
         glm::vec3 e1 = v1 - v0;
 		glm::vec3 e2 = v2 - v0;
 		glm::vec3 h = glm::cross(ray.direction, e2);
@@ -109,6 +110,13 @@ public:
 
 		float t_ = f * glm::dot(e2, q);
 		if (t_ > EPSILON) {
+            if (material.IsTexture) {
+                //计算交点的 UV 坐标
+                float b3 = 1.0f - u - v;  // 第三重心坐标
+
+                //使用重心坐标计算 UV 坐标
+                uv = u * vt0 + v * vt1 + b3 * vt2;
+            }
 			normal = glm::normalize(glm::cross(e1, e2));
             t = t_;
 			return true;
@@ -117,7 +125,7 @@ public:
     }
 
     // 构造函数
-    Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, glm::vec3 vc, Material material)
-        : v0(v0), v1(v1), v2(v2), centroid(vc), material(material), bounding_box(AABB(glm::min(v0,glm::min(v1, v2)), glm::max(v0, glm::max(v1, v2)))) {}
+    Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, glm::vec2& vt0, glm::vec2& vt1, glm::vec2& vt2, glm::vec3 vc, Material material)
+        : v0(v0), v1(v1), v2(v2), vt0(vt0), vt1(vt1), vt2(vt2), centroid(vc), material(material), bounding_box(AABB(glm::min(v0,glm::min(v1, v2)), glm::max(v0, glm::max(v1, v2)))) {}
 };
 #endif

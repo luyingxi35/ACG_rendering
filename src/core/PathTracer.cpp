@@ -41,6 +41,46 @@ glm::vec3 sampleAreaLight(const Light& light, int sampleIndex, int totalSamples)
 
     return sampledPoint;
 }
+glm::vec3 bilinearInterpolation(const glm::vec2& uv, std::shared_ptr<Texture> texture) {
+    int width = texture->width, height = texture->height;
+    // uv 是归一化的纹理坐标，范围在 [0, 1] 之间
+    float x = uv.x * (width - 1);  // 将 uv.x 映射到纹理的水平坐标
+    float y = uv.y * (height - 1); // 将 uv.y 映射到纹理的垂直坐标
+
+    int x0 = static_cast<int>(x);   // 左侧网格点
+    int y0 = static_cast<int>(y);   // 底部网格点
+    int x1 = std::min(x0 + 1, width - 1); // 右侧网格点（防止越界）
+    int y1 = std::min(y0 + 1, height - 1); // 顶部网格点（防止越界）
+
+    glm::vec3 color(0.0f);
+    for (int i = 0; i < 3; ++i) {
+        // 获取四个邻近点的纹理颜色
+        int id1 = (y0 * width + x0) * 3 + i;
+        int id2 = (y0 * width + x1) * 3 + i;
+        int id3 = (y1 * width + x0) * 3 + i;
+        int id4 = (y1 * width + x1) * 3 + i;
+
+        /*std::cout << "id1: " << id1 << " value: " << (int)texture->data[id1] << std::endl;
+        std::cout << "id2: " << id2 << " value: " << (int)texture->data[id2] << std::endl;
+        std::cout << "id3: " << id3 << " value: " << (int)texture->data[id3] << std::endl;
+        std::cout << "id4: " << id4 << " value: " << (int)texture->data[id4] << std::endl;*/
+
+
+        // 水平插值 (x方向)
+        float R1 = texture->data[id1] + (x - x0) * (texture->data[id2] - texture->data[id1]); // f(x, y0)
+        float R2 = texture->data[id3] + (x - x0) * (texture->data[id4] - texture->data[id3]); // f(x, y1)
+
+        //std::cout << "R1: " << R1 << " R2: " << R2 << std::endl;
+
+        // 垂直插值 (y方向)
+        float value = R1 + (y - y0) * (R2 - R1);
+
+        color[i] = value / 255.0f; // 转换为 0-1 范围
+    }
+
+    return color;
+}
+
 
 // 漫反射光照
 glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen) {
@@ -95,9 +135,30 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                 // float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
                 // lightContribution += intersection.material().diffuseReflect * diff * attenuation * light.color;
 
+                //glm::vec3 brdf_0 = glm::vec3(0.0f);
+
+                //texture mapping
+                //if (intersection.material().IsTexture) {
+                    //std::cout << "Texture loaded!" << std::endl;
+                //}
+                if (intersection.material().IsTexture) {
+                    glm::vec2 uv = intersection.uv();
+                    glm::vec3 textureColor = bilinearInterpolation(uv, intersection.material().texture);
+                    intersection.material().diffuseReflect = textureColor;
+                    //std::cout << "textureColor: " << textureColor[0] << ", " << textureColor[1] << ", " << textureColor[2] << std::endl;
+                    //std::cout << "diffusecolor: "<< intersection.material().diffuseReflect[0] << ", " << intersection.material().diffuseReflect[1] << ", " << intersection.material().diffuseReflect[2] << std::endl;
+                    //brdf_0 = intersection.material().diffuseReflect;
+                    //std::cout << "brdf: " << brdf_0[0] << ", " << brdf_0[1] << ", " << brdf_0[2] << std::endl;
+                }
+
                 // compute BRDF (Lambertian)
                 glm::vec3 brdf = intersection.material().diffuseReflect;
-                 // compute PDF for area light sampling (uniform over area)
+               /* if (brdf == brdf_0 && intersection.material().IsTexture) {
+                    std::cout << "Texture mapping succeed!!" << std::endl;
+                    std::cout << "brdf: " << brdf[0] << ", " << brdf[1] << ", " << brdf[2] << std::endl;
+                }*/
+                //std::cout << "brdf outside!!!!!: " << brdf[0] << ", " << brdf[1] << ", " << brdf[2] << std::endl;
+                  // compute PDF for area light sampling (uniform over area)
                 float area = glm::length(glm::cross(light.u, light.v));
                 float pdf = 1.0f / area;
                 //std::cout << "pdf: " << pdf << std::endl;
@@ -141,6 +202,13 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
 
             //float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
             //diffuseColor += intersection.material().diffuseReflect * diff * lightIntensity * light.color;
+
+            //texture mapping
+            if (intersection.material().IsTexture) {
+                glm::vec2 uv = intersection.uv();
+                glm::vec3 textureColor = bilinearInterpolation(uv, intersection.material().texture);
+                intersection.material().diffuseReflect = textureColor;
+            }
 
              // Compute BRDF (Lambertian)
             glm::vec3 brdf = intersection.material().diffuseReflect;
@@ -566,6 +634,8 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         const Material material_intersect = intersection_scene.material();
         glm::vec3 position_new = intersection_scene.point();
         glm::vec3 normal = intersection_scene.normal();
+        glm::vec2 uv = intersection_scene.uv();
+        bool IsTexture = intersection_scene.material().IsTexture;
 
         // 处理双面材质
         if (material_intersect.twoSided && glm::dot(ray.direction, normal) > 0) {
@@ -581,7 +651,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         }
 
         // 漫反射光照
-        if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
+        if (glm::length(material_intersect.diffuseReflect) > EPSILON || IsTexture) {
             result_color += computeDiffuseLighting(intersection_scene, bvh, scene, gen);
         }
 

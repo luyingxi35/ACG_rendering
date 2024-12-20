@@ -215,12 +215,13 @@ bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, floa
 		for (int i = 0; i < node.tri_count; i++) {
 			float tTri = 1e7;
 			glm::vec3 normal = { 0.0,0.0,0.0 };
+			glm::vec2 uv = { 0.0,0.0 };
 			Triangle& triangle = ordered_triangles[node.triangle_index + i];
-			if (triangle.intersect(ray, tTri, normal) && tTri > tMin && tTri < t) {
+			if (triangle.intersect(ray, tTri, normal, uv) && tTri > tMin && tTri < t) {
 				t = tTri;
 				hit = true;
 				material = triangle.material;
-				intersection.set(t, ray.position + t * ray.direction, normal, material);
+				intersection.set(t, ray.position + t * ray.direction, normal, material, uv);
 			}
 		}
 		return hit;

@@ -60,25 +60,25 @@ void Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	meshes.push_back(modelMesh);
 }
 
-GLuint Model::loadTextureFromFile(const std::string& texturePath) {
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	// 使用STB图片库来加载纹理（你可以替换为其他图片加载库）
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
-	if (data) {
-		GLenum format = (nrChannels == 1) ? GL_RED : (nrChannels == 3) ? GL_RGB : GL_RGBA;
-		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(data);
-	}
-	else {
-		std::cerr << "Failed to load texture: " << texturePath << std::endl;
-		stbi_image_free(data);
-	}
-
-	return textureID;
-}
+//GLuint Model::loadTextureFromFile(const std::string& texturePath) {
+//	GLuint textureID;
+//	glGenTextures(1, &textureID);
+//	glBindTexture(GL_TEXTURE_2D, textureID);
+//
+//	// 使用STB图片库来加载纹理（你可以替换为其他图片加载库）
+//	int width, height, nrChannels;
+//	unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
+//	if (data) {
+//		GLenum format = (nrChannels == 1) ? GL_RED : (nrChannels == 3) ? GL_RGB : GL_RGBA;
+//		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+//		glGenerateMipmap(GL_TEXTURE_2D);
+//		stbi_image_free(data);
+//	}
+//	else {
+//		std::cerr << "Failed to load texture: " << texturePath << std::endl;
+//		stbi_image_free(data);
+//	}
+//
+//	return textureID;
+//}
 

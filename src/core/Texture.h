@@ -8,12 +8,14 @@
 
 class Texture {
 public:
-    Texture(const std::string& filepath);
-    Color getColorAt(float u, float v) const;
-private:
-    // 实际纹理数据（以某种方式加载纹理）
-    unsigned char* data;
-    int width, height;
-};
+    unsigned char* data;  // 存储纹理的图像数据
+    int width, height;    // 纹理的宽度和高度
 
+    // 析构函数来释放纹理数据
+    ~Texture() {
+        if (data) {
+            stbi_image_free(data);
+        }
+    }
+};
 #endif // TEXTURE_H
