@@ -5,7 +5,6 @@
 #include "Model.h"
 
 
-
 class Scene {
 public:
     Scene();

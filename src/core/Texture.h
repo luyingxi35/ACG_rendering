@@ -10,6 +10,7 @@ class Texture {
 public:
     unsigned char* data;  // 存储纹理的图像数据
     int width, height;    // 纹理的宽度和高度
+	float* heightData;    // 高度贴图数据
 
     // 析构函数来释放纹理数据
     ~Texture() {

@@ -84,6 +84,26 @@ std::shared_ptr<Texture> loadTexture(const std::string& texturePath) {
     return texture;
 }
 
+// 加载高度贴图图像
+float* loadHeightMap(const std::string& filePath) {
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &nrChannels, 1); // 1 表示灰度图像
+
+    if (data == nullptr) {
+        std::cerr << "Error loading height map: " << filePath << std::endl;
+        return nullptr;
+    }
+
+    // 将图像数据转换为浮动数据
+    float* heightData = new float[width * height];
+    for (int i = 0; i < width * height; ++i) {
+        heightData[i] = data[i] / 255.0f;  // 将灰度值转化为 [0, 1] 范围
+    }
+
+    stbi_image_free(data);
+    return heightData;
+}
+
 Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
     Material material;
     // 初始目标节点为当前 bsdf 节点
@@ -139,12 +159,22 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
         material.diffuseReflect = extractRGB(target_bsdf, "diffuse_reflectance");
         auto texture = target_bsdf.child("texture");
         if (texture) {
-            if (std::string(texture.child("string").attribute("name").as_string()) == "filename") {
-                std::string textureFile = texture.child("string").attribute("value").as_string();
-                material.texture = loadTexture("assets/" + textureFile);
-                material.IsTexture = true;
-                if (material.texture != nullptr) {
-                    std::cout << "Texture loaded: " << textureFile << std::endl;
+            for (auto StringNode : texture.children("string")) {
+                if (std::string(StringNode.attribute("name").as_string()) == "filename") {
+                    std::string textureFile = texture.child("string").attribute("value").as_string();
+                    material.texture = loadTexture("assets/" + textureFile);
+                    material.IsTexture = true;
+                    if (material.texture != nullptr) {
+                        std::cout << "Texture loaded: " << textureFile << std::endl;
+                    }
+                }
+                if (std::string(StringNode.attribute("name").as_string()) == "Dispname") {
+                    std::string HeightFile = texture.child("string").attribute("value").as_string();
+                    material.texture->heightData = loadHeightMap("assets/" + HeightFile);
+					material.IsTextureHeight = true;
+                    if (material.texture->heightData != nullptr) {
+                        std::cout << "Texture's height data loaded: " << HeightFile << std::endl;
+                    }
                 }
             }
         }

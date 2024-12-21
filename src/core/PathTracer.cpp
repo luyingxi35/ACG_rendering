@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 65;
+const int MAX_BOUNCES = 500;
 const float P = 0.66666;
 
 //point light
@@ -661,9 +661,9 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         }
 
         // 折射光照
-        //if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
-          //  result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
-        //}
+        /*if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
+            result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
+        }*/
 
         // Russian Roulette for Path Termination
         if (bounceCount >= 5) {
@@ -698,15 +698,15 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         }
 
         // 递归折射
-        /*if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
-            //std::cout << "Intersect with refraction materail." << std::endl;
-            glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
-            if (glm::length(refract_dir) > 0.0f) {
-                Ray refract_ray = { position_new - e * normal, refract_dir };
-                float cosTheta = glm::dot(normal, refract_dir);
-                result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * cosTheta / (2 * static_cast<float> (M_PI));
-            }
-        }*/
+        //if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
+        //    //std::cout << "Intersect with refraction materail." << std::endl;
+        //    glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
+        //    if (glm::length(refract_dir) > 0.0f) {
+        //        Ray refract_ray = { position_new - e * normal, refract_dir };
+        //        float cosTheta = glm::dot(normal, refract_dir);
+        //        result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * cosTheta / (2 * static_cast<float> (M_PI));
+        //    }
+        //}
     }
     // else {
     //     // 背景颜色，可选

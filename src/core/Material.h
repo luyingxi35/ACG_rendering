@@ -29,6 +29,7 @@ public:
 		this->emission = glm::vec3(0.0f);
 		this->IsTexture = false;
 		this->texture = nullptr;
+		this->IsTextureHeight = false;
 	};
 	~Material() {};
 	MaterialType type;
@@ -44,6 +45,7 @@ public:
 	glm::vec3 emission;  // 发光颜色
 	bool IsTexture;
 	std::shared_ptr<Texture> texture; // 使用智能指针管理纹理资源
+	bool IsTextureHeight;
 };
 
 #endif // !MATERIAL_H

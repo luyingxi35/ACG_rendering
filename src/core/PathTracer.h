@@ -14,7 +14,6 @@
 #include "Intersection.h"
 #include "stb_image_write.h"
 #include "../acceleration/BVH.h"
-#include "../utils/definition.h"
 #include <thread>
 #include <vector>
 #include <mutex>
