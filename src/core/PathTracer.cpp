@@ -3,7 +3,7 @@
 #define M_PI 3.1415926535
 
 const int MAX_BOUNCES = 65;
-const float P = 0.66666;
+const float P = 0.6666;
 
 //point light
 /*bool intersectLight(const Ray& ray, const std::vector<Light> lights, Light& result_light, Intersection& intersection) {
@@ -40,6 +40,12 @@ glm::vec3 sampleAreaLight(const Light& light, int sampleIndex, int totalSamples)
         (light.v * v_sample);
 
     return sampledPoint;
+}
+
+glm::vec3 CosineSampleHemisphere(const glm::vec2& sample) {
+    float r = std::sqrt(sample.x);
+    float phi = 2.0f * M_PI * sample.y;
+    return { r * glm::cos(phi), glm::sqrt(1 - r * r), r * glm::sin(phi) };
 }
 
 // 漫反射光照
@@ -81,13 +87,13 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                 Ray shadowRay = { intersection.point() + e * intersection.normal(), lightDir };
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
-                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
                 //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
                 //if (inShadow)
                   //  std::cout << 1 << std::endl;
                 //else
                   //  std::cout << 0 << std::endl;
-                if (inShadow) {
+                if (inShadow) {;
                     continue; // 采样点被遮挡，跳过
                 }
 
@@ -133,7 +139,7 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
             Ray shadowRay = { intersection.point() + e * intersection.normal(), lightDir };
             Intersection shadowIntersection;
             float t = lightDistance - EPSILON;
-            bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+            bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
             //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
             if (inShadow) {
                 continue; // 被遮挡，跳过
@@ -232,7 +238,7 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                     Intersection shadowIntersection;
                     float t = lightDistance - EPSILON;
                     //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
-                    bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+                    bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
                     if (inShadow) {
                         continue; // 采样点被遮挡，跳过
                     }
@@ -257,7 +263,7 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                 Ray shadowRay = { intersection.point() + normal * e, lightDir };
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
-                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
                 //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
                 if (inShadow) {
                     continue; // Point is in shadow, skip this light
@@ -302,7 +308,7 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                     Ray shadowRay = { intersection.point() + normal * e, lightDir };
                     Intersection shadowIntersection;
                     float t = lightDistance - EPSILON;
-                    bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+                    bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
                     //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
                     if (inShadow) {
                         continue; // 采样点被遮挡，跳过
@@ -356,7 +362,7 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                 Ray shadowRay = { intersection.point() + normal * e, lightDir };
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
-                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
                 if (inShadow) {
                     continue; // Point is in shadow, skip this light
                 }
@@ -452,7 +458,7 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
                 Ray shadowRay = { intersection.point() + normal * e, lightDir };
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
-                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
                 if (inShadow) {
                     continue; // 采样点被遮挡，跳过
                 }
@@ -484,7 +490,7 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
             Ray shadowRay = { intersection.point() + normal * e, lightDir };
             Intersection shadowIntersection;
             float t = lightDistance - EPSILON;
-            bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t);
+            bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
             if (inShadow) {
                 continue; // Point is in shadow, skip this light
             }
@@ -557,7 +563,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
     glm::vec3 result_color = glm::vec3(0.0f);
     Intersection intersection_scene;
     float t = 1e6f;  // init t set to a large value
-    bool intersect_scene = bvh.intersect(ray, intersection_scene, 0.0f, t);
+    bool intersect_scene = bvh.intersect(ray, intersection_scene, 0.0f, t, scene.spheres);
     if (!intersect_scene) {
         // std::cout << "No intersection." << std::endl;
         return result_color;
@@ -598,7 +604,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         //}
 
         // Russian Roulette for Path Termination
-        if (bounceCount >= 5) {
+        if (bounceCount >= 16) {
             float p = P;
             std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
             float rand = distribution(gen);

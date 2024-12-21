@@ -14,6 +14,7 @@
 #include <cmath>
 #include <string>
 #include <random>
+#include "../core/Intersection.h"
 
 
 #define EPSILON 1e-6
@@ -120,5 +121,36 @@ public:
     // ¹¹Ôìº¯Êý
     Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, glm::vec3 vc, Material material)
         : v0(v0), v1(v1), v2(v2), centroid(vc), material(material), bounding_box(AABB(glm::min(v0,glm::min(v1, v2)), glm::max(v0, glm::max(v1, v2)))) {}
+};
+
+class Sphere {
+public:
+	Sphere(glm::vec3 center, float radius, Material material) : center(center), radius(radius) , material(material){}
+    bool intersect(const Ray& ray, float& t, glm::vec3& normal, float t_min, float t_max) {
+		glm::vec3 co = ray.position - center;
+		float a = glm::dot(ray.direction, ray.direction);
+		float b = 2.0f * glm::dot(co, ray.direction);
+		float c = glm::dot(co, co) - radius * radius;
+		float discriminant = b * b - 4 * a * c;
+        bool hit = false;
+        if (discriminant < 0) {
+			return false;
+        }
+		float t0 = (-b - sqrt(discriminant)) / (2.0f * a);
+        if (t0 < 0) {
+			t0 = (-b + sqrt(discriminant)) / (2.0f * a);
+        }
+        if (t0 > t_min || t0 < t_max) {
+			normal = -glm::normalize(ray.position + t0 * ray.direction - center);
+			t = t0;
+            t_max = t0;
+            hit = true;
+        }
+        return hit;
+    }
+    Material material;
+	glm::vec3 center;
+	float radius;
+    
 };
 #endif

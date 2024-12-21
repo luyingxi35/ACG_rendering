@@ -136,8 +136,7 @@ int BVH::flattenTree(BVHTreeNode* node) {
 	return idx;
 }
 
-bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
-
+bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax, const std::vector<Sphere> &spheres) {
 	glm::bvec3 dir_is_neg = {
 		ray.direction.x < 0,
 		ray.direction.y < 0,
@@ -181,6 +180,7 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 					hit = true;
 					material = triangle_iter->material;
 					intersection.set(tTri, ray.position + tTri * ray.direction, normal, material);
+					//std::cout << tTri << std::endl;
 				}
 				triangle_iter++;
 			}
@@ -190,12 +190,18 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 			current_node_idx = *(--ptr);
 		}
 	}
-	/*if (hit) {
-		std::cout << "hit\n";
+	float tSph = tMax;
+	glm::vec3 normal = { 0.0,0.0,0.0 };
+	for (auto sphere : spheres) {
+		//std::cout << "Before sphere: " << tMax << std::endl;
+		if (sphere.intersect(ray, tSph, normal, tMin, tMax) && tSph < tMax && tSph > tMin) {
+			hit = true;
+			tMax = tSph;
+			intersection.set(tSph, ray.position + tSph * ray.direction, normal, sphere.material);
+			//std::cout << "Hit the sphere." << std::endl;
+			//std::cout << "After sphere: " << tSph << std::endl;
+		}
 	}
-	else {
-		std::cout << "not hit\n";
-	}*/
 
 	return hit;
 }
