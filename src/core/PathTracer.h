@@ -32,7 +32,7 @@ struct Task {
 class PathTracer {
 public:
 	void render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel, int numThreads);
-	glm::vec3 tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen, glm::vec3 &beta);
+	glm::vec3 tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen);
 	/*void renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
 		int width, int height, int samplesPerPixel,
 		int xStart, int xEnd,
