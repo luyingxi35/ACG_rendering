@@ -40,7 +40,7 @@ private:
 	BVHTreeNode* buildTree(std::vector<Triangle> triangles, int depth);
 	int flattenTree(BVHTreeNode* node);
 	AABB computeBounds(const std::vector<Triangle>& triangles);
-	bool intersectNode(int node_index, Ray& ray, Intersection& intersection, float& t);
+	bool intersectNode(int node_index, Ray& ray, Intersection& intersection, float& t, float& tMin, float& tMax);
 	void destroy(BVHTreeNode* node) {
 		if (!node) return;
 		destroy(node->left);
@@ -65,7 +65,8 @@ public:
 	}
 	~BVH() { destroy(root); }
 
-	bool intersect(Ray& ray, Intersection& intersection, float& t) { return intersectNode(0, ray, intersection, t); }
+	//bool intersect(Ray& ray, Intersection& intersection, float& t) { float tMin = 0.0f; float tMax = t; return intersectNode(0, ray, intersection, t, tMin, tMax); }
+	bool intersect(Ray& ray, Intersection& intersection, float tMin, float tMax);
 };
 #endif
 

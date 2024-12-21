@@ -86,7 +86,7 @@ public:
     glm::vec3 centroid;
     AABB bounding_box;
     
-    bool intersect(const Ray& ray, float& t, glm::vec3& normal) {
+    bool intersect(const Ray& ray, float& t, glm::vec3& normal, float t_min, float t_max) {
         glm::vec3 e1 = v1 - v0;
 		glm::vec3 e2 = v2 - v0;
 		glm::vec3 h = glm::cross(ray.direction, e2);
@@ -108,8 +108,9 @@ public:
             return false;
 
 		float t_ = f * glm::dot(e2, q);
-		if (t_ > EPSILON) {
+		if (t_ > t_min && t_ < t_max) {
 			normal = glm::normalize(glm::cross(e1, e2));
+            t_max = t_;
             t = t_;
 			return true;
 		}
