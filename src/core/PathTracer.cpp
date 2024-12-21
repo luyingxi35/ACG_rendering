@@ -93,7 +93,7 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                   //  std::cout << 1 << std::endl;
                 //else
                   //  std::cout << 0 << std::endl;
-                if (inShadow) {;
+                if (inShadow) {
                     continue; // 采样点被遮挡，跳过
                 }
 
@@ -556,7 +556,7 @@ glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal, std::mt19937& ge
 
 
 // 追踪路径
-glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen) {
+glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen, glm::vec3 &beta) {
     if (bounceCount >= MAX_BOUNCES)
         return glm::vec3(0.0f);
 
@@ -611,28 +611,38 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             if (rand > p) {
                 return result_color;
             }
-            result_color /= p;
+            beta /= p;
         }
 
         int bounceCount_new = bounceCount + 1;
         float e = 0.0001f;
+
+        float pdf;
+        glm::vec3 brdf;
 
         // 递归反射
         if (glm::length(material_intersect.specularReflect) > EPSILON) {
             //std::cout << "Intersect with specular material." << std::endl;
             glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
             Ray reflect_ray = { position_new + e * normal, reflect_dir };
+			//brdf = material_intersect.specularReflect / glm::dot(reflect_dir, normal);
+            //pdf = 1.0f;
+            beta *= material_intersect.specularReflect;
             float cosTheta = glm::dot(normal, reflect_dir);
-            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * material_intersect.specularReflect * cosTheta / (2 * static_cast<float> (M_PI));
+            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen, beta) * beta;
         }
 
         // 递归漫反射
         if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
             //std::cout << "Intersect with diffuse material." << std::endl;
+            pdf = 1 / static_cast<float>(2 * M_PI);
             glm::vec3 diffuse_dir = generateRandomDirection(normal, gen);
             Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
+            //brdf = material_intersect.diffuseReflect / static_cast<float>(M_PI);
+            //beta *= brdf * abs(glm::dot(diffuse_dir, normal)) / pdf;
+            beta *= material_intersect.diffuseReflect * abs(glm::dot(diffuse_dir, normal)) * 2.0f;
             float cosTheta = glm::dot(normal, diffuse_dir);
-            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * material_intersect.diffuseReflect * cosTheta / (2 * static_cast<float> (M_PI));
+            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen,beta) * beta;
         }
 
         // 递归折射
@@ -740,7 +750,8 @@ void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh
                     //PROFILE("sample one pixel")
                     glm::vec3 sample_direction = generateSample(camera, x, y, width, height, gen);
                     Ray ray = { camera.position, sample_direction };
-                    glm::vec3 color_mid = tracePath(ray, scene, bvh, 0, gen);
+                    glm::vec3 beta = glm::vec3(1.0f);
+                    glm::vec3 color_mid = tracePath(ray, scene, bvh, 0, gen, beta);
                     pixel_radiance += color_mid * (1.0f / static_cast<float>(samplesPerPixel));
                 }
                 //if (y >= 100) {
