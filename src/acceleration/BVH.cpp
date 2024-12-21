@@ -143,7 +143,7 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 		ray.direction.y < 0,
 		ray.direction.z < 0,
 	};
-	//glm::vec3 inv_dir = 1.0f / ray.direction;
+	glm::vec3 inv_dir = 1.0f / ray.direction;
 
 	std::array<int, 32> stack;
 	auto ptr = stack.begin();
@@ -153,7 +153,7 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 
 	while (true) {
 		auto& node = nodes[current_node_idx];
-		if (!node.bounds.intersect(ray, tMin, tMax)) {
+		if (!node.bounds.intersect(ray, inv_dir, tMin, tMax)) {
 			if (ptr == stack.begin()) {
 				break;
 			}

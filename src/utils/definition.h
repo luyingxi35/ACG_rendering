@@ -44,21 +44,21 @@ struct Ray {
 struct AABB {
     glm::vec3 min, max;
 
-    bool intersect(Ray& ray, float tMin, float tMax) {
-
-        glm::vec3 t1 = (min - ray.position) / ray.direction;
-        glm::vec3 t2 = (max - ray.position) / ray.direction;
+    bool intersect(const Ray& ray, const glm::vec3& inv_direction, float t_min, float t_max) const {
+        glm::vec3 t1 = (min - ray.position) * inv_direction;
+        glm::vec3 t2 = (max - ray.position) * inv_direction;
         glm::vec3 tmin = glm::min(t1, t2);
         glm::vec3 tmax = glm::max(t1, t2);
 
         float near = glm::max(tmin.x, glm::max(tmin.y, tmin.z));
         float far = glm::min(tmax.x, glm::min(tmax.y, tmax.z));
 
-        if (near <= tMin && far >= tMax) {
+        // 判断是否相交（提前退出以提高效率）
+        if (near > far || far < t_min || near > t_max) {
             return false;
         }
 
-        return glm::max(near, tMin) <= glm::min(far, tMax);
+        return true;
     }
 
     void expand(const AABB& aabb) {
