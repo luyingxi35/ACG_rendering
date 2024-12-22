@@ -42,10 +42,22 @@ glm::vec3 sampleAreaLight(const Light& light, int sampleIndex, int totalSamples)
     return sampledPoint;
 }
 
-// 漫反射光照
-glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen) {
-    glm::vec3 diffuseColor(0.0f, 0.0f, 0.0f);
+float PowerHeuristic(const float& pdf_s, const float& n_s, const float& pdf_f, const float& n_f)
+{
+    if (isinf(pdf_s))
+        return 1.0f;
+    if (isinf(pdf_f))
+        return 0.0f;
+    else if (fabs(pdf_f - 0.0f) < 1e-6f && fabs(pdf_s - 0.0f) < 1e-6f)
+        return 0.f;
+    else
+        return glm::pow(pdf_s * n_s, 2.0f) / (glm::pow(pdf_s * n_s, 2.0f) + glm::pow(pdf_f * n_f, 2.0f));
+}
 
+// 漫反射光照
+glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen, float &light_pdf) {
+    glm::vec3 diffuseColor(0.0f, 0.0f, 0.0f);
+	light_pdf = 0.0f;
     for (const auto& light : scene.lights) {
         // 判断是否为面光源（通过检查 u 和 v 向量）
         if (glm::length(light.u) > 0.0f && glm::length(light.v) > 0.0f) {
@@ -101,6 +113,10 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
                 //float cosineWeightedPDF = cosTheta1 * cosTheta2;
                 //glm::vec3 weight = (brdf * cosineWeightedPDF * attenuation) / (pdf);
 				glm::vec3 weight = intersection.material().diffuseReflect * cosTheta1 * attenuation / pdf;
+                float pdfLight = pdf * lightDistance * lightDistance / fabs(cosTheta2);
+				light_pdf = pdfLight / static_cast<float>(numSamples);
+				float pdfBRDF = fabs(cosTheta1) / static_cast<float>(M_PI);
+                float W = PowerHeuristic(pdfLight, static_cast<float>(numSamples), pdfBRDF, 1);
                 //std::cout << "weight: " << weight[0] << ", " << weight[1] << ", " << weight[2] << std::endl;
 
                 lightContribution +=  weight * light.color;
@@ -530,6 +546,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         return glm::vec3(0.0f);
 
     glm::vec3 result_color = glm::vec3(0.0f);
+    float light_pdf = 0.0f;
     Intersection intersection_scene;
     float t = 1e6f;  // init t set to a large value
     bool intersect_scene = bvh.intersect(ray, intersection_scene, 0.0f, t, scene.spheres);
@@ -559,7 +576,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
 
         // 漫反射光照
         if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
-            result_color += computeDiffuseLighting(intersection_scene, bvh, scene, gen);
+            result_color += computeDiffuseLighting(intersection_scene, bvh, scene, gen, light_pdf);
         }
 
         // 镜面反射光照
@@ -609,9 +626,18 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
             //brdf = material_intersect.diffuseReflect / static_cast<float>(M_PI);
             //beta *= brdf * abs(glm::dot(diffuse_dir, normal)) / pdf;
-            beta *= material_intersect.diffuseReflect * abs(glm::dot(diffuse_dir, normal)) * 2.0f;
+            //beta *= material_intersect.diffuseReflect * abs(glm::dot(diffuse_dir, normal)) * 2.0f;
             float cosTheta = glm::dot(normal, diffuse_dir);
-            result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * beta;
+			float brdf_pdf = abs(cosTheta) / static_cast<float>(M_PI);
+            float W;
+            if (glm::length(light_pdf) < EPSILON) {
+				W = 1.0f;
+			}
+            else {
+                W = PowerHeuristic(brdf_pdf, 1, light_pdf, 32);
+            }
+            beta *= material_intersect.diffuseReflect;
+            result_color +=  tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * beta;
         }
 
         // 递归折射

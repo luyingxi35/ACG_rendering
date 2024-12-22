@@ -69,7 +69,7 @@ private:
 	std::queue<Task> task_queue;
 	bool done = false;
 	std::mutex cout_mutex;
-	glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen);
+	glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen, float &light_pdf);
 	glm::vec3 computeSpecularLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray);
 	glm::vec3 refractDirection(const glm::vec3& incident, const glm::vec3& normal, float ext_ior, float int_ior);
 	glm::vec3 computeRefractionLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray);
