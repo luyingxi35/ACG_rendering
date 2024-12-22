@@ -40,7 +40,7 @@ private:
 	BVHTreeNode* buildTree(std::vector<Triangle> triangles, int depth);
 	int flattenTree(BVHTreeNode* node);
 	AABB computeBounds(const std::vector<Triangle>& triangles);
-	bool intersectNode(int node_index, Ray& ray, Intersection& intersection, float& t, float& tMin, float& tMax);
+	//bool intersectNode(int node_index, Ray& ray, Intersection& intersection, float& t, float& tMin, float& tMax);
 	void destroy(BVHTreeNode* node) {
 		if (!node) return;
 		destroy(node->left);
@@ -50,9 +50,9 @@ private:
 public:
 	BVH(const Scene& scene) {
 		PROFILE("Build BVH")
-		num_triangles = scene.triangles.size();
+			num_triangles = scene.triangles.size();
 		//std::vector<Triangle> triangles = scene.triangles;
- 		root = buildTree(scene.triangles, 0);
+		root = buildTree(scene.triangles, 0);
 		std::cout << "num_nodes: " << num_nodes << std::endl;
 		std::cout << "num_triangles: " << num_triangles << std::endl;
 		std::cout << "Finish build the BVH tree." << std::endl;
@@ -66,9 +66,6 @@ public:
 	~BVH() { destroy(root); }
 
 	//bool intersect(Ray& ray, Intersection& intersection, float& t) { float tMin = 0.0f; float tMax = t; return intersectNode(0, ray, intersection, t, tMin, tMax); }
-	bool intersect(Ray& ray, Intersection& intersection, float tMin, float tMax);
+	bool intersect(Ray& ray, Intersection& intersection, float tMin, float tMax, const std::vector<Sphere>& spheres);
 };
 #endif
-
-
-

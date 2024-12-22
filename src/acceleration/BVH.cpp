@@ -136,7 +136,7 @@ int BVH::flattenTree(BVHTreeNode* node) {
 	return idx;
 }
 
-bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
+bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax, const std::vector<Sphere> &spheres) {
 
 	glm::bvec3 dir_is_neg = {
 		ray.direction.x < 0,
@@ -192,44 +192,19 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 			current_node_idx = *(--ptr);
 		}
 	}
-	/*if (hit) {
-		std::cout << "hit\n";
+	float tSph = tMax;
+	glm::vec3 normal = { 0.0,0.0,0.0 };
+	glm::vec2 uv = { 0.0,0.0 };
+	for (auto sphere : spheres) {
+		//std::cout << "Before sphere: " << tMax << std::endl;
+		if (sphere.intersect(ray, tSph, normal, tMin, tMax) && tSph < tMax && tSph > tMin) {
+			hit = true;
+			tMax = tSph;
+			intersection.set(tSph, ray.position + tSph * ray.direction, normal, sphere.material, uv);
+			//std::cout << "Hit the sphere." << std::endl;
+			//std::cout << "After sphere: " << tSph << std::endl;
+		}
 	}
-	else {
-		std::cout << "not hit\n";
-	}*/
 
 	return hit;
 }
-/*bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, float& t) {
-	//std::cout << t;
-	
-	BVHFlatNode& node = nodes[node_idx];
-	if (!node.bounds.intersect(ray, tMin, tMax)) {
-		//std::cout << "Not itersect with bounds." << std::endl;
-		return false;
-	}
-	if (node.isLeaf) {
-		//std::cout << "Leaf: ";
-		bool hit = false;
-		Material material = Material();
-		for (int i = 0; i < node.tri_count; i++) {
-			float tTri = 1e7;
-			glm::vec3 normal = { 0.0,0.0,0.0 };
-			glm::vec2 uv = { 0.0,0.0 };
-			glm::vec3 point = { 0.0,0.0,0.0 };
-			Triangle& triangle = ordered_triangles[node.triangle_index + i];
-			if (triangle.intersect(ray, tTri, normal, tMin, tMax) && tTri > tMin && tTri < tMax) {
-				t = tTri;
-				tMax = tTri;
-				hit = true;
-				material = triangle.material;
-				intersection.set(t, point, normal, material, uv);
-			}
-		}
-		return hit;
-	}
-	bool hitLeft = intersectNode(node_idx + 1, ray, intersection, t, tMin, tMax);
-	bool hitRight = intersectNode(node.child1_index, ray, intersection, t, tMin, tMax);
-	return hitLeft || hitRight;
-}*/
