@@ -179,7 +179,7 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
             }
         }
         else {
-            std::cout << "No texture found." << std::endl;
+            //std::cout << "No texture found." << std::endl;
         }
     }
     else if (type == "diffuse") {
@@ -205,7 +205,7 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
             }
         }
         else {
-            std::cout << "No texture found." << std::endl;
+            //std::cout << "No texture found." << std::endl;
         }
     }
     else {
@@ -229,6 +229,16 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
 //}
 
 void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera) {
+    glm::vec3 sphere_center = { 0.0f, 15.0f, 0.0f };
+    float sphere_radius = 37.0f;
+    Material sphere_material;
+    sphere_material.diffuseReflect = glm::vec3(1.0f);
+    sphere_material.twoSided = true;
+    //sphere_material.emission = glm::vec3(0.1f);
+    Sphere sphere = Sphere(sphere_center, sphere_radius, sphere_material);
+    spheres.push_back(sphere);
+    std::cout << "Number of spheres: " << spheres.size() << std::endl;
+
     pugi::xml_document doc;
     if (!doc.load_file(xmlPath.c_str())) {
         std::cerr << "Failed to load XML scene file: " << xmlPath << std::endl;
@@ -371,7 +381,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 0.5f; // 根据需要调整强度
+                    light.intensity = 0.05f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
 

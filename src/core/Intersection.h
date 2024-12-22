@@ -31,7 +31,6 @@ public:
     // 更新交点信息
     void set(const float t, const glm::vec3& point, const glm::vec3& normal, Material material, const glm::vec2& uv);
 
-private:
     bool hit_;           // 是否有交点
     float t_;
     glm::vec3 point_;      // 交点位置

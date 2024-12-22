@@ -14,6 +14,7 @@
 #include <cmath>
 #include <string>
 #include <random>
+#include "../core/Intersection.h"
 
 
 #define EPSILON 1e-6
@@ -72,11 +73,11 @@ struct AABB {
     }
 
     AABB() {
-		min = glm::vec3(std::numeric_limits<float>::max());
-		max = glm::vec3(std::numeric_limits<float>::lowest());
+        min = glm::vec3(std::numeric_limits<float>::max());
+        max = glm::vec3(std::numeric_limits<float>::lowest());
     }
 
-	AABB(glm::vec3 min_, glm::vec3 max_) : min(min_), max(max_) {}
+    AABB(glm::vec3 min_, glm::vec3 max_) : min(min_), max(max_) {}
 };
 
 class Triangle {
@@ -85,7 +86,7 @@ public:
     glm::vec2 vt0, vt1, vt2; // 三个纹理坐标
     Material material;
     glm::vec3 centroid;
-    AABB bounding_box;\
+    AABB bounding_box; \
 
         float bilinearInterpolate(const glm::vec2& uv, std::shared_ptr<Texture> texture) {
         int width = texture->width;
@@ -141,6 +142,7 @@ public:
 
 		//std::cout << "hValue0: " << hValue0 << " hValue1: " << hValue1 << " hValue2: " << hValue2 << " hValue3: " << hValue3 << std::endl;
 
+
         // 水平插值 (x方向)
         float R1 = hValue0 + (x - x0) * (hValue1 - hValue0); // f(x, y0)
         float R2 = hValue2 + (x - x0) * (hValue3 - hValue2); // f(x, y1)
@@ -156,25 +158,25 @@ public:
 
         return Heightnormal;
     }
-    
+
     bool intersect(const Ray& ray, float& t, glm::vec3& normal, float t_min, float t_max, glm::vec2& uv, glm::vec3& point) {
         glm::vec3 e1 = v1 - v0;
-		glm::vec3 e2 = v2 - v0;
-		glm::vec3 h = glm::cross(ray.direction, e2);
-		float a = glm::dot(e1, h);
+        glm::vec3 e2 = v2 - v0;
+        glm::vec3 h = glm::cross(ray.direction, e2);
+        float a = glm::dot(e1, h);
 
-		if (a > -EPSILON && a < EPSILON) {
-			return false;
-		}
+        if (a > -EPSILON && a < EPSILON) {
+            return false;
+        }
 
         float f = 1.0f / a;
-		glm::vec3 s = ray.position - v0;
+        glm::vec3 s = ray.position - v0;
         float u = f * glm::dot(s, h);
         if (u < 0.0 || u > 1.0)
             return false;
 
-		glm::vec3 q = glm::cross(s, e1);
-		float v = f * glm::dot(ray.direction, q);
+        glm::vec3 q = glm::cross(s, e1);
+        float v = f * glm::dot(ray.direction, q);
         if (v < 0.0 || u + v > 1.0)
             return false;
 
@@ -195,10 +197,11 @@ public:
                 uv = b3 * vt0 + u * vt1 + v * vt2;
 
                 if (material.IsTextureHeight) {
-					float heightValue = bilinearInterpolate(uv, material.texture);
-					//std::cout << "heightValue: " << heightValue << std::endl;
-                    
-                    // 在 Z 轴方向上偏移顶点的位置（Z轴表示高度）
+                    float heightValue = bilinearInterpolate(uv, material.texture);
+                    //std::cout << "heightValue: " << heightValue << std::endl;
+
+                    // 在 y 轴方向上偏移顶点的位置（Z轴表示高度）
+
                     point.y += heightValue * 5.0f;  // 10.0f: 缩放因子，用于放大效果
 					//std::cout << "point_z: " << point.z << std::endl;
 
@@ -235,13 +238,44 @@ public:
             }
             t_max = t_;
             t = t_;
-			return true;
-		}
-		return false;
+            return true;
+        }
+        return false;
     }
 
     // 构造函数
     Triangle(glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, glm::vec2& vt0, glm::vec2& vt1, glm::vec2& vt2, glm::vec3 vc, Material material)
-        : v0(v0), v1(v1), v2(v2), vt0(vt0), vt1(vt1), vt2(vt2), centroid(vc), material(material), bounding_box(AABB(glm::min(v0,glm::min(v1, v2)), glm::max(v0, glm::max(v1, v2)))) {}
+        : v0(v0), v1(v1), v2(v2), vt0(vt0), vt1(vt1), vt2(vt2), centroid(vc), material(material), bounding_box(AABB(glm::min(v0, glm::min(v1, v2)), glm::max(v0, glm::max(v1, v2)))) {}
+};
+
+class Sphere {
+public:
+    Sphere(glm::vec3 center, float radius, Material material) : center(center), radius(radius), material(material) {}
+    bool intersect(const Ray& ray, float& t, glm::vec3& normal, float t_min, float t_max) {
+        glm::vec3 co = ray.position - center;
+        float a = glm::dot(ray.direction, ray.direction);
+        float b = 2.0f * glm::dot(co, ray.direction);
+        float c = glm::dot(co, co) - radius * radius;
+        float discriminant = b * b - 4 * a * c;
+        bool hit = false;
+        if (discriminant < 0) {
+            return false;
+        }
+        float t0 = (-b - sqrt(discriminant)) / (2.0f * a);
+        if (t0 < 0) {
+            t0 = (-b + sqrt(discriminant)) / (2.0f * a);
+        }
+        if (t0 > t_min || t0 < t_max) {
+            normal = -glm::normalize(ray.position + t0 * ray.direction - center);
+            t = t0;
+            t_max = t0;
+            hit = true;
+        }
+        return hit;
+    }
+    Material material;
+    glm::vec3 center;
+    float radius;
+
 };
 #endif
