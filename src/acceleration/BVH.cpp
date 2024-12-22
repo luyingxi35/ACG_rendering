@@ -136,14 +136,14 @@ int BVH::flattenTree(BVHTreeNode* node) {
 	return idx;
 }
 
-/*bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
+bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax) {
 
 	glm::bvec3 dir_is_neg = {
 		ray.direction.x < 0,
 		ray.direction.y < 0,
 		ray.direction.z < 0,
 	};
-	//glm::vec3 inv_dir = 1.0f / ray.direction;
+	glm::vec3 inv_dir = 1.0f / ray.direction;
 
 	std::array<int, 32> stack;
 	auto ptr = stack.begin();
@@ -153,7 +153,7 @@ int BVH::flattenTree(BVHTreeNode* node) {
 
 	while (true) {
 		auto& node = nodes[current_node_idx];
-		if (!node.bounds.intersect(ray, tMin, tMax)) {
+		if (!node.bounds.intersect(ray, inv_dir, tMin, tMax)) {
 			if (ptr == stack.begin()) {
 				break;
 			}
@@ -173,14 +173,16 @@ int BVH::flattenTree(BVHTreeNode* node) {
 		else {
 			float tTri = 1e7;
 			glm::vec3 normal = { 0.0,0.0,0.0 };
+			glm::vec2 uv = { 0.0,0.0 };
+			glm::vec3 point = { 0.0,0.0,0.0 };
 			Material material = Material();
 			auto triangle_iter = ordered_triangles.begin() + node.triangle_index;
 			for (int i = 0; i < node.tri_count; i++) {
-				if (triangle_iter->intersect(ray, tTri, normal) && tTri > tMin && tTri < tMax) {
+				if (triangle_iter->intersect(ray, tTri, normal, tMin, tMax, uv, point)) {
 					tMax = tTri;
 					hit = true;
 					material = triangle_iter->material;
-					intersection.set(tTri, ray.position + tTri * ray.direction, normal, material);
+					intersection.set(tTri, point, normal, material, uv);
 				}
 				triangle_iter++;
 			}
@@ -197,12 +199,11 @@ int BVH::flattenTree(BVHTreeNode* node) {
 		std::cout << "not hit\n";
 	}*/
 
-	/*return hit;
-}*/
-bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, float& t) {
+	return hit;
+}
+/*bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, float& t) {
 	//std::cout << t;
-	float tMin = 0.0;
-	float tMax = t;
+	
 	BVHFlatNode& node = nodes[node_idx];
 	if (!node.bounds.intersect(ray, tMin, tMax)) {
 		//std::cout << "Not itersect with bounds." << std::endl;
@@ -218,8 +219,9 @@ bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, floa
 			glm::vec2 uv = { 0.0,0.0 };
 			glm::vec3 point = { 0.0,0.0,0.0 };
 			Triangle& triangle = ordered_triangles[node.triangle_index + i];
-			if (triangle.intersect(ray, tTri, normal, uv, point) && tTri > tMin && tTri < t) {
+			if (triangle.intersect(ray, tTri, normal, tMin, tMax) && tTri > tMin && tTri < tMax) {
 				t = tTri;
+				tMax = tTri;
 				hit = true;
 				material = triangle.material;
 				intersection.set(t, point, normal, material, uv);
@@ -227,7 +229,7 @@ bool BVH::intersectNode(int node_idx, Ray& ray, Intersection& intersection, floa
 		}
 		return hit;
 	}
-	bool hitLeft = intersectNode(node_idx + 1, ray, intersection, t);
-	bool hitRight = intersectNode(node.child1_index, ray, intersection, t);
+	bool hitLeft = intersectNode(node_idx + 1, ray, intersection, t, tMin, tMax);
+	bool hitRight = intersectNode(node.child1_index, ray, intersection, t, tMin, tMax);
 	return hitLeft || hitRight;
-}
+}*/

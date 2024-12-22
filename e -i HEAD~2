@@ -1,0 +1,33 @@
+[33ma872434[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mSAH[m[33m, [m[1;31morigin/SAH[m[33m)[m Clear some BUG, complete height map, and merge with shadow test
+[33m7844d84[m Clear some BUG, complete height map, and merge with shadow test
+[33m886685d[m Clear some BUG and add height map
+[33mf489f11[m Clear the BUG in adding simple texture mapping in SAH
+[33m1842ac3[m disable fraction
+[33m1f609ea[m modified intersection with triangle
+[33mbf0e0e9[m clear the BUG!
+[33mf0c9f42[m add SAH
+[33mb6a87a0[m adjust the profile
+[33md284e8a[m clear the bug
+[33mc8577a5[m modified BVH, have BUG
+[33mfbf15e4[m flatten BVH
+[33mdf32923[m add profile.h/,cpp
+[33m84f40bf[m clear the bug
+[33mfdafed2[m add profile, have BUG with BVH
+[33m4579f8f[m modified multi-thread
+[33mb0be923[m add importance sampling with RR, color texture, still under testing
+[33m5c21100[m add importance sampling with RR, no color on the floor
+[33m48a691d[m relocate area light agian
+[33mc766459[m relocated camera and area light
+[33m8e50124[m modify BVH to partition triangles
+[33md359a5d[m correct sample generation
+[33mc459f7c[m debug multi-thread, sample area light
+[33me2018cb[m add multi-thread
+[33m883103f[m correct some errors, get unzero colors
+[33m53867fc[m Add files via upload
+[33m21c1f25[m merge BVH and BSDF agian
+[33m52e0129[m merge BVH and BSDF
+[33m50aea1e[m BVH accelerate with models
+[33m6770358[m load model transform matrix
+[33m583e99c[m draft-pathtracer
+[33m95c3fb8[m model scene setup
+[33mb542908[m initial commit

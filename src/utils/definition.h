@@ -44,21 +44,21 @@ struct Ray {
 struct AABB {
     glm::vec3 min, max;
 
-    bool intersect(Ray& ray, float tMin, float tMax) {
-
-        glm::vec3 t1 = (min - ray.position) / ray.direction;
-        glm::vec3 t2 = (max - ray.position) / ray.direction;
+    bool intersect(const Ray& ray, const glm::vec3& inv_direction, float t_min, float t_max) const {
+        glm::vec3 t1 = (min - ray.position) * inv_direction;
+        glm::vec3 t2 = (max - ray.position) * inv_direction;
         glm::vec3 tmin = glm::min(t1, t2);
         glm::vec3 tmax = glm::max(t1, t2);
 
         float near = glm::max(tmin.x, glm::max(tmin.y, tmin.z));
         float far = glm::min(tmax.x, glm::min(tmax.y, tmax.z));
 
-        if (near <= tMin && far >= tMax) {
+        // 判断是否相交（提前退出以提高效率）
+        if (near > far || far < t_min || near > t_max) {
             return false;
         }
 
-        return glm::max(near, tMin) <= glm::min(far, tMax);
+        return true;
     }
 
     void expand(const AABB& aabb) {
@@ -139,8 +139,10 @@ public:
         float hValue2 = texture->heightData[y1 * width + x0];
         float hValue3 = texture->heightData[y1 * width + x1];
 
+		//std::cout << "hValue0: " << hValue0 << " hValue1: " << hValue1 << " hValue2: " << hValue2 << " hValue3: " << hValue3 << std::endl;
+
         // 水平插值 (x方向)
-        float R1 = hValue0 + (x - x0) * (hValue2 - hValue1); // f(x, y0)
+        float R1 = hValue0 + (x - x0) * (hValue1 - hValue0); // f(x, y0)
         float R2 = hValue2 + (x - x0) * (hValue3 - hValue2); // f(x, y1)
 
         //std::cout << "R1: " << R1 << " R2: " << R2 << std::endl;
@@ -149,13 +151,13 @@ public:
         float heightValue = R1 + (y - y0) * (R2 - R1);
 
         // 使用梯度计算法线(local)
-        glm::vec3 Heightnormal(hValue1 - hValue0, hValue3 - hValue2, 2.0f);  // 2.0f 用于放大效果
+        glm::vec3 Heightnormal(hValue1 - hValue0, hValue3 - hValue2, 0.1f);  // 0.1f 用于放大效果
         Heightnormal = glm::normalize(Heightnormal);
 
         return Heightnormal;
     }
     
-    bool intersect(const Ray& ray, float& t, glm::vec3& normal, glm::vec2& uv, glm::vec3& point) {
+    bool intersect(const Ray& ray, float& t, glm::vec3& normal, float t_min, float t_max, glm::vec2& uv, glm::vec3& point) {
         glm::vec3 e1 = v1 - v0;
 		glm::vec3 e2 = v2 - v0;
 		glm::vec3 h = glm::cross(ray.direction, e2);
@@ -177,9 +179,14 @@ public:
             return false;
 
 		float t_ = f * glm::dot(e2, q);
+        normal = glm::normalize(glm::cross(e1, e2));
+        //// change normal to color for debugging
+        //glm::vec3 normalColor = (normal * 0.5f) + glm::vec3(0.5f, 0.5f, 0.5f);
+        //normal = normalColor;
+        
 		point = ray.position + t_ * ray.direction;
-		if (t_ > EPSILON) {
-            normal = glm::normalize(glm::cross(e1, e2));
+		if (t_ > t_min && t_ < t_max) {
+            //normal = glm::normalize(glm::cross(e1, e2));
             if (material.IsTexture) {
                 //计算交点的 UV 坐标
                 float b3 = 1.0f - u - v;  // 第三重心坐标
@@ -192,32 +199,41 @@ public:
 					//std::cout << "heightValue: " << heightValue << std::endl;
                     
                     // 在 Z 轴方向上偏移顶点的位置（Z轴表示高度）
-                    point.z += heightValue * 5.0f;  // 10.0f: 缩放因子，用于放大效果
+                    point.y += heightValue * 5.0f;  // 10.0f: 缩放因子，用于放大效果
 					//std::cout << "point_z: " << point.z << std::endl;
 
-					//glm::vec3 Heightnormal = bilinearInterpolateNormal(uv, material.texture);
+					glm::vec3 Heightnormal = bilinearInterpolateNormal(uv, material.texture);
 
-					////TBN, transfrom local normal to world normal
-     //               glm::vec2 deltauv1 = vt1 - vt0;
-     //               glm::vec2 deltauv2 = vt2 - vt0;
+					//std::cout << "Heightnormal: " << Heightnormal[0] << " " << Heightnormal[1] << " " << Heightnormal[2] << std::endl;
 
-     //               float r = 1.0f / (deltauv1.x * deltauv2.y - deltauv1.y * deltauv2.x);
-     //               glm::vec3 tangent = glm::normalize((deltauv2.y * e1 - deltauv1.y * e2) * r);
-     //               glm::vec3 bitangent = glm::normalize((deltauv1.x * e2 - deltauv2.x * e1) * r);
-     //      
-     //               glm::vec3 rebitangent = glm::cross(normal, tangent);
-     //               if (glm::dot(rebitangent, bitangent) < 0.0f) {
-     //                   bitangent = -bitangent;
-     //               }
-     //               glm::mat3 TBN = glm::mat3(tangent, bitangent, normal);
+					//TBN, transfrom local normal to world normal
+                    glm::vec2 deltauv1 = vt1 - vt0;
+                    glm::vec2 deltauv2 = vt2 - vt0;
+					glm::mat3 TBN = glm::mat3(1.0f);
 
-					////将法线从局部空间转换到世界空间
-					//glm::vec3 worldHeightNormal = glm::normalize(TBN * Heightnormal);
+                    float determinant = deltauv1.x * deltauv2.y - deltauv1.y * deltauv2.x;
+                    if (std::abs(determinant) > 1e-6f) {
+                        float r = 1.0f / determinant;
 
-     //               normal += worldHeightNormal;
-					//normal = glm::normalize(normal);
+                        glm::vec3 tangent = glm::normalize((deltauv2.y * e1 - deltauv1.y * e2) * r);
+                        glm::vec3 bitangent = glm::normalize((deltauv1.x * e2 - deltauv2.x * e1) * r);
+
+                        glm::vec3 rebitangent = glm::cross(normal, tangent);
+                        if (glm::dot(rebitangent, bitangent) < 0.0f) {
+                            bitangent = -bitangent;
+                        }
+                        TBN = glm::mat3(tangent, bitangent, normal);
+                    }
+
+					//将法线从局部空间转换到世界空间
+					glm::vec3 worldHeightNormal = glm::normalize(TBN * Heightnormal);
+
+                    normal = worldHeightNormal;
+					normal = glm::normalize(normal);
+					//std::cout << normal[0] << " " << normal[1] << " " << normal[2] << std::endl;
                 }
             }
+            t_max = t_;
             t = t_;
 			return true;
 		}
