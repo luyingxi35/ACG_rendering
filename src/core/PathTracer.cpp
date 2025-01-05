@@ -61,6 +61,7 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
     for (const auto& light : scene.lights) {
         // 判断是否为面光源（通过检查 u 和 v 向量）
         if (glm::length(light.u) > 0.0f && glm::length(light.v) > 0.0f) {
+            // std::cout << "Area Light." << std::endl;
             //std::cout << "Light size: (" << light.u[0] << ", "<< light.u[1] <<", " << light.u[2] << "), (" << light.v[0] << ", " << light.v[1] << ", " << light.v[2] << ")" << std::endl;
             // 面光源：进行多次采样
             int numSamples = light.samples;
@@ -127,41 +128,26 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
             diffuseColor += lightContribution / static_cast<float>(numSamples);
         }
         else { // 点光源
+			// std::cout << "Point Light." << std::endl;
             glm::vec3 lightDir = light.position - intersection.point();
-            float lightDistance = glm::length(lightDir);
-            float attenuation = light.intensity / (lightDistance * lightDistance);
-            lightDir = glm::normalize(lightDir);
+			float lightDistance = glm::length(lightDir);
+			lightDir = glm::normalize(lightDir);
 
-            // Compute the cosine of the angle between light direction and normal
-            float cosTheta1 = glm::dot(intersection.normal(), lightDir);
-            if (cosTheta1 <= 0.0f)
-                continue; // Light is below the surface
-            float cosThera2 = glm::dot(lightDir, glm::vec3(0.0f, 0.0f, -1.0f));
+			float epsilon = 0.0001f;
+			Ray shadowRay = { intersection.point() + epsilon * intersection.normal(), lightDir };
+			Intersection shadowIntersection;
+			float tMax = lightDistance - EPSILON;
 
-            // 阴影射线：从交点到光源位置
-            float e = 0.0001f;
-            Ray shadowRay = { intersection.point() + e * intersection.normal(), lightDir };
-            Intersection shadowIntersection;
-            float t = lightDistance - EPSILON;
-            bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
-            //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
-            if (inShadow) {
-                continue; // 被遮挡，跳过
+			if (bvh.intersect(shadowRay, shadowIntersection, 0.0f, tMax, scene.spheres)) {
+                return diffuseColor;
+			}
+
+			float attenuation = light.intensity / (lightDistance * lightDistance);
+
+			float cosTheta = glm::dot(intersection.normal(), lightDir);
+            if (cosTheta > 0.0f) {
+				diffuseColor += intersection.material().diffuseReflect * cosTheta * attenuation * light.color;
             }
-
-            //float diff = glm::max(0.0f, glm::dot(intersection.normal(), lightDir));
-            //diffuseColor += intersection.material().diffuseReflect * diff * lightIntensity * light.color;
-
-             // Compute BRDF (Lambertian)
-            glm::vec3 brdf = intersection.material().diffuseReflect;
-
-            // Compute PDF for point light sampling (delta distribution, handled via direct lighting)
-            float pdf = glm::length(light.u) * glm::length(light.v);
-
-            // Importance Sampling: direct illumination from point light
-            glm::vec3 weight = (brdf * cosTheta1 * cosThera2) / pdf;
-
-            diffuseColor += weight * light.color * attenuation;
         }
     }
     //std::cout << "Diffuse Color: " << diffuseColor[0] << " " << diffuseColor[1] << " " << diffuseColor[2] << std::endl;
@@ -258,27 +244,29 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                 specularColor += lightContribution / static_cast<float>(numSamples);
             }
             else { // 点光源
-                glm::vec3 lightDir = light.position - intersection.point();  // ray direction
-                float lightDistance = glm::length(lightDir);
-                lightDir = glm::normalize(lightDir);
+                glm::vec3 lightDir = light.position - intersection.point();
+				float lightDistance = glm::length(lightDir);
+				lightDir = glm::normalize(lightDir);
 
-                // Check if the point is in shadow (if the light is blocked by other objects)
-                float e = 0.0001f;
-                Ray shadowRay = { intersection.point() + normal * e, lightDir };
-                Intersection shadowIntersection;
-                float t = lightDistance - EPSILON;
-                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
-                //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
-                if (inShadow) {
-                    continue; // Point is in shadow, skip this light
+				float epsilon = 0.0001f;
+				Ray shadowRay = { intersection.point() + epsilon * intersection.normal(), lightDir };
+				Intersection shadowIntersection;
+				float tMax = lightDistance - EPSILON;
+
+				if (bvh.intersect(shadowRay, shadowIntersection, 0.0f, tMax, scene.spheres)) {
+					return specularColor;
+				}
+
+				float attenuation = light.intensity / (lightDistance * lightDistance);
+
+				glm::vec3 viewDir = glm::normalize(-ray.direction);
+				glm::vec3 reflectDir = glm::normalize(glm::reflect(-lightDir, intersection.normal()));
+                float cosAlpha = glm::dot(viewDir, reflectDir);
+
+                if (cosAlpha > 0.0f) {
+					float shininess = intersection.material().alpha;
+                    specularColor += intersection.material().specularReflect * light.color * attenuation * std::pow(cosAlpha, shininess);
                 }
-
-                // direction for perfect reflect
-                glm::vec3 reflectDir = glm::normalize(glm::reflect(-lightDir, normal));
-                float lightIntensity = light.intensity;
-                float spec = std::pow(std::max(0.0f, glm::dot(reflectDir, viewDir)), intersection.material().alpha);
-
-                specularColor += intersection.material().specularReflect * spec * (1.0f / (lightDistance * lightDistance)) * lightIntensity;
             }
         }
     }
@@ -357,53 +345,56 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
                 specularColor += lightContribution / static_cast<float>(numSamples);
             }
             else { // 点光源
-                glm::vec3 lightDir = light.position - intersection.point();  // light direction 
-                float lightDistance = glm::length(lightDir);
-                lightDir = glm::normalize(lightDir);
+                glm::vec3 lightDir = light.position - intersection.point();  // 光线方向
+                float lightDistance = glm::length(lightDir);                 // 点光源距离
+                lightDir = glm::normalize(lightDir);                         // 方向单位化
 
-                // Check if the point is in shadow (if the light is blocked by other objects)
-                float e = 0.0001f;
-                Ray shadowRay = { intersection.point() + normal * e, lightDir };
+                // 判断是否被遮挡
+                float epsilon = 0.0001f;
+                Ray shadowRay = { intersection.point() + normal * epsilon, lightDir };
                 Intersection shadowIntersection;
-                float t = lightDistance - EPSILON;
-                bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
-                if (inShadow) {
-                    continue; // Point is in shadow, skip this light
+                float tMax = lightDistance - EPSILON;
+
+                if (bvh.intersect(shadowRay, shadowIntersection, 0.0f, tMax, scene.spheres)) {
+                    continue;  // 当前点光源被遮挡，直接跳过
                 }
 
                 // 半程向量 h
                 glm::vec3 halfDir = glm::normalize(lightDir + viewDir);
 
                 // 材质信息
+                float alpha = intersection.material().alpha;
+                glm::vec3 specularReflect = intersection.material().specularReflect;
+
                 float intIOR = intersection.material().int_ior;
                 float extIOR = intersection.material().ext_ior;
                 glm::vec3 eta = intersection.material().eta;
-                float eta_f = 0.0f;
-                if (glm::length(eta) < EPSILON && intIOR > EPSILON) {
-                    eta_f = intIOR / extIOR;
-                }
                 glm::vec3 k = intersection.material().k;
 
-                // 计算 GGX 分布 D, 几何遮蔽 G 和 菲涅尔项 F
-                float D = GGX_D(halfDir, normal, alpha);
-                float G = GGX_G(lightDir, viewDir, normal, halfDir);
+                // 菲涅尔计算
                 glm::vec3 F = glm::vec3(0.0f);
-                float cosTheta = glm::dot(viewDir, halfDir);  // 计算视线方向与半程向量之间的夹角余弦
+                float cosTheta = glm::dot(viewDir, halfDir);
                 if (intersection.material().type == MaterialType::RoughConductor) {
-                    // k != 0, 对导体材质（金属）的反射
+                    // 导体材质（金属）的反射
                     F = computeFresnelConductor(cosTheta, eta, k);
                 }
                 else {
-                    // k = 0, 对塑料，陶瓷的反射
-                    float F0 = 0.0f;  // all the eta = 2/3
+                    // 非导体（塑料、陶瓷等）的反射
+                    float F0 = 0.04f;  // 默认菲涅尔反射率
                     float F_f = GGX_F(viewDir, halfDir, F0);
                     F = glm::vec3(F_f, F_f, F_f);
                 }
 
-                // 计算有一定粗糙度的，GGX分布的镜面反射光照
-                auto spec = (D * G * F) / (4.0f * glm::dot(lightDir, normal) * glm::dot(viewDir, normal));
+                // GGX分布 D 和几何遮蔽 G
+                float D = GGX_D(halfDir, normal, alpha);
+                float G = GGX_G(lightDir, viewDir, normal, halfDir);
 
-                specularColor += specularReflect * spec * (1.0f / (lightDistance * lightDistance));
+                // 镜面反射贡献
+                float cosThetaN = glm::dot(lightDir, normal);  // 法线与光线方向的余弦
+                if (cosThetaN > 0.0f) {
+                    auto spec = (D * G * F) / (4.0f * cosThetaN * glm::dot(viewDir, normal));
+                    specularColor += specularReflect * spec * (light.intensity / (lightDistance * lightDistance));
+                }
             }
         }
     }

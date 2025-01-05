@@ -151,14 +151,14 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         return;
     }
 
-    /*Light light_point;
-    light_point.position = { 0.0f, 33.0f, 0.0f };
+    Light light_point;
+    light_point.position = { 0.0f, 35.0f, 0.0f };
     light_point.u = glm::vec3(0.0f);
     light_point.v = glm::vec3(0.0f);
-    light_point.intensity = 0.5f;
+    light_point.intensity = 15.0f;
     light_point.color = { 125, 100, 75 };
 	light_point.samples = 32;
-    lights.push_back(light_point);*/
+    lights.push_back(light_point);
 
     // Extract camera
     pugi::xml_node cameraNode = doc.child("scene").child("sensor");
@@ -235,7 +235,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         }
 
         // handle rectangle
-        else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
+        /*else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
             auto model = std::make_shared<Model>();
 
             // extract material
@@ -306,6 +306,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 addModel(model);
             }
 
-        }
+        }*/
     }
+    std::cout << "number of lights: " << lights.size() << std::endl;
 }
