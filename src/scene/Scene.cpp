@@ -310,10 +310,27 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
         // add moving sphere
 		Material sphere_material = Material();
+		sphere_material.type = MaterialType::RoughConductor;
         sphere_material.twoSided = true;
-        sphere_material.diffuseReflect = glm::vec3(0.445, 0.371, 0.075);
+		sphere_material.alpha = 0.1f;
+        sphere_material.specularReflect = glm::vec3(0.578596, 0.578596, 0.578596);
+		sphere_material.eta = glm::vec3(1.65746, 0.880369, 0.521229);
+		sphere_material.k = glm::vec3(9.22387, 6.26952, 4.837);
         glm::vec3 center = glm::vec3(0.0f, 7.0f, 0.0f);
-        glm::vec3 center2 = center + glm::vec3(0.0f, 4.0f, 0.0f);
-	    spheres.push_back(Sphere(center, center2, 3.5f, sphere_material));
+	    spheres.push_back(Sphere(center, 5.0f, sphere_material));
+
+        Material material2 = Material();
+		material2.twoSided = true;
+        material2.diffuseReflect = glm::vec3(0.001, 0.2, 0.4);
+        glm::vec3 center_1 = glm::vec3(-11.0f, 6.0f, 8.0f);
+		glm::vec3 center2_1 = center_1 + glm::vec3(0.0f, 4.0f, 0.0f);
+		spheres.push_back(Sphere(center_1, center2_1, 3.5f, material2));
+
+		Material material3 = Material();
+		material3.twoSided = true;
+		material3.diffuseReflect = glm::vec3(0.56, 0.93, 0.56);
+		glm::vec3 center_2 = glm::vec3(10.0f, 6.0f, 12.0f);
+		glm::vec3 center2_2 = center_2 + glm::vec3(0.0f, 4.0f, 0.0f);
+		spheres.push_back(Sphere(center_2, center2_2, 3.5f, material3));
     }
 }

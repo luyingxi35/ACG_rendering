@@ -190,14 +190,16 @@ bool BVH::intersect(Ray& ray, Intersection& intersection, float tMin, float tMax
 			current_node_idx = *(--ptr);
 		}
 	}
-	float tSph = tMax;
+	float tSph;
 	glm::vec3 normal = { 0.0,0.0,0.0 };
 	for (auto sphere : spheres) {
 		//std::cout << "Before sphere: " << tMax << std::endl;
+		tSph = 1e7;
 		if (sphere.intersect(ray, tSph, normal, tMin, tMax) && tSph < tMax && tSph > tMin) {
 			hit = true;
 			tMax = tSph;
-			intersection.set(tSph, ray.position + tSph * ray.direction, normal, sphere.material);
+			Material material = sphere.material;
+			intersection.set(tSph, ray.position + tSph * ray.direction, normal, material);
 			//std::cout << "Hit the sphere." << std::endl;
 			//std::cout << "After sphere: " << tSph << std::endl;
 		}

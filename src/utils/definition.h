@@ -152,10 +152,9 @@ public:
         if (t0 < 0) {
 			t0 = (-b + sqrt(discriminant)) / (2.0f * a);
         }
-        if (t0 > t_min || t0 < t_max) {
-			normal = -glm::normalize(ray.at(t0) - current_center);
+        if (t0 > t_min && t0 < t_max) {
+			normal = glm::normalize(ray.at(t0) - current_center);
 			t = t0;
-            t_max = t0;
             hit = true;
         }
         return hit;
