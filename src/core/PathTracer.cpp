@@ -475,31 +475,40 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
             refractionColor += lightContribution / static_cast<float>(numSamples);
         }
         else { // 点光源
-            glm::vec3 lightDir = light.position - intersection.point();
-            float lightDistance = glm::length(lightDir);
-            float lightIntensity = light.intensity / (lightDistance * lightDistance);
-            lightDir = glm::normalize(lightDir);
+            glm::vec3 lightDir = light.position - intersection.point();  // 光线方向
+            float lightDistance = glm::length(lightDir);                 // 光源距离
+            lightDir = glm::normalize(lightDir);                         // 单位化方向
 
-            // 阴影射线：从交点到光源位置
-            float e = 0.0001f;
-            Ray shadowRay = { intersection.point() + normal * e, lightDir };
+            // 阴影检测：确保没有物体遮挡光线
+            float epsilon = 0.0001f;
+            Ray shadowRay = { intersection.point() + normal * epsilon, lightDir };
             Intersection shadowIntersection;
-            float t = lightDistance - EPSILON;
-            bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
-            if (inShadow) {
-                continue; // Point is in shadow, skip this light
+            float tMax = lightDistance - EPSILON;
+
+            if (bvh.intersect(shadowRay, shadowIntersection, 0.0f, tMax, scene.spheres)) {
+                continue;  // 被遮挡，跳过当前点光源
             }
 
-            float intIOR = intersection.material().int_ior;
-            float extIOR = intersection.material().ext_ior;
-            float eta_f = intIOR / extIOR;
-            float F0 = 0.04f;
+            // 计算折射方向
+            float intIOR = intersection.material().int_ior;  // 内部折射率
+            float extIOR = intersection.material().ext_ior;  // 外部折射率
 
-            glm::vec3 halfDir = glm::normalize(lightDir + viewDir);
-            float fresnelTerm = GGX_F(viewDir, halfDir, F0);
+            glm::vec3 refractDir = refractDirection(viewDir, normal, extIOR, intIOR);
+            if (glm::length(refractDir) < EPSILON) {
+                // 发生全反射（全反射时 refractDirection 返回零向量）
+                continue;
+            }
 
-            // 将折射贡献累积
-            refractionColor += (1.0f - fresnelTerm) * lightIntensity * light.color;
+            // 菲涅尔项计算（使用 GGX_F 已有代码）
+            float cosThetaIncident = glm::dot(-viewDir, normal);  // 入射方向与法线夹角的余弦值
+            float F0 = 0.04f;  // 默认非金属材质的菲涅尔常数
+            float fresnelTerm = GGX_F(viewDir, glm::normalize(refractDir - viewDir), F0);
+
+            // 点光源的光强衰减
+            float attenuation = light.intensity / (lightDistance * lightDistance);
+
+            // 折射光的比例为 (1 - fresnelTerm)
+            refractionColor += (1.0f - fresnelTerm) * attenuation * light.color;
         }
     }
 
