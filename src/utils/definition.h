@@ -38,8 +38,18 @@ struct Camera {
 
 // ¹âÏßÀà
 struct Ray {
+public:
     glm::vec3 position;
     glm::vec3 direction;
+    float time;
+	glm::vec3 at(float t) {
+		return position + t * direction;
+	}
+    glm::vec3 at(float t) const {
+        return position + t * direction;
+    }
+	Ray(glm::vec3 origin, glm::vec3 direction, float time) : position(origin), direction(direction), time(time) {}
+	Ray(glm::vec3 origin, glm::vec3 direction) : position(origin), direction(direction), time(0.0f) {}
 };
 
 struct AABB {
@@ -125,9 +135,11 @@ public:
 
 class Sphere {
 public:
-	Sphere(glm::vec3 center, float radius, Material material) : center(center), radius(radius) , material(material){}
+    Sphere(glm::vec3 center1, glm::vec3 center2, float radius, Material material) : center(center1, center1 - center2), radius(radius), material(material) {}
+    Sphere(glm::vec3 center, float radius, Material material) : center(center, glm::vec3(0.0f)), radius(radius) , material(material){}
     bool intersect(const Ray& ray, float& t, glm::vec3& normal, float t_min, float t_max) {
-		glm::vec3 co = ray.position - center;
+        glm::vec3 current_center = center.at(ray.time);
+		glm::vec3 co = ray.position - current_center;
 		float a = glm::dot(ray.direction, ray.direction);
 		float b = 2.0f * glm::dot(co, ray.direction);
 		float c = glm::dot(co, co) - radius * radius;
@@ -141,7 +153,7 @@ public:
 			t0 = (-b + sqrt(discriminant)) / (2.0f * a);
         }
         if (t0 > t_min || t0 < t_max) {
-			normal = -glm::normalize(ray.position + t0 * ray.direction - center);
+			normal = -glm::normalize(ray.at(t0) - current_center);
 			t = t0;
             t_max = t0;
             hit = true;
@@ -149,8 +161,17 @@ public:
         return hit;
     }
     Material material;
-	glm::vec3 center;
+	Ray center;
 	float radius;
     
 };
+
+inline float random_float() {
+    // Returns a random real in [0,1).
+    return std::rand() / (RAND_MAX + 1.0);
+}
+inline float random_float(float min, float max) {
+    // Returns a random real in [min,max).
+    return min + (max - min) * random_float();
+}
 #endif

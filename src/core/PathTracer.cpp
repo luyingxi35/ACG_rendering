@@ -90,7 +90,8 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
 
                 // 阴影射线：从交点到采样点
                 float e = 0.0001f;
-                Ray shadowRay = { intersection.point() + e * intersection.normal(), lightDir };
+                float ray_time = random_float()-0.5f;
+                Ray shadowRay = Ray( intersection.point() + e * intersection.normal(), lightDir, ray_time);
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
                 bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -140,7 +141,8 @@ glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bv
 
             // 阴影射线：从交点到光源位置
             float e = 0.0001f;
-            Ray shadowRay = { intersection.point() + e * intersection.normal(), lightDir };
+            float ray_time = random_float()-0.5f;
+            Ray shadowRay = Ray( intersection.point() + e * intersection.normal(), lightDir, ray_time);
             Intersection shadowIntersection;
             float t = lightDistance - EPSILON;
             bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -238,7 +240,8 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
 
                     // 阴影射线：从交点到采样点
                     float e = 0.0001f;
-                    Ray shadowRay = { intersection.point() + normal * e, lightDir };
+                    float ray_time = random_float()-0.5f;
+                    Ray shadowRay = Ray( intersection.point() + normal * e, lightDir, ray_time);
                     Intersection shadowIntersection;
                     float t = lightDistance - EPSILON;
                     //bool inShadow = bvh.intersect(shadowRay, shadowIntersection, t);
@@ -264,7 +267,8 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
 
                 // Check if the point is in shadow (if the light is blocked by other objects)
                 float e = 0.0001f;
-                Ray shadowRay = { intersection.point() + normal * e, lightDir };
+                float ray_time = random_float()-0.5f;
+                Ray shadowRay = Ray( intersection.point() + normal * e, lightDir, ray_time);
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
                 bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -309,7 +313,8 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
 
                     // 阴影射线：从交点到采样点
                     float e = 0.0001f;
-                    Ray shadowRay = { intersection.point() + normal * e, lightDir };
+                    float ray_time = random_float()-0.5f;
+                    Ray shadowRay = Ray( intersection.point() + normal * e, lightDir, ray_time);
                     Intersection shadowIntersection;
                     float t = lightDistance - EPSILON;
                     bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -363,7 +368,8 @@ glm::vec3 PathTracer::computeSpecularLighting(Intersection& intersection, BVH& b
 
                 // Check if the point is in shadow (if the light is blocked by other objects)
                 float e = 0.0001f;
-                Ray shadowRay = { intersection.point() + normal * e, lightDir };
+                float ray_time = random_float()-0.5f;
+                Ray shadowRay = Ray( intersection.point() + normal * e, lightDir, ray_time);
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
                 bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -459,7 +465,8 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
 
                 // 阴影射线：从交点到采样点
                 float e = 0.0001f;
-                Ray shadowRay = { intersection.point() + normal * e, lightDir };
+                float ray_time = random_float()-0.5f;
+                Ray shadowRay = Ray( intersection.point() + normal * e, lightDir, ray_time);
                 Intersection shadowIntersection;
                 float t = lightDistance - EPSILON;
                 bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -491,7 +498,8 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
 
             // 阴影射线：从交点到光源位置
             float e = 0.0001f;
-            Ray shadowRay = { intersection.point() + normal * e, lightDir };
+            float ray_time = random_float()-0.5f;
+            Ray shadowRay = { intersection.point() + normal * e, lightDir, ray_time};
             Intersection shadowIntersection;
             float t = lightDistance - EPSILON;
             bool inShadow = bvh.intersect(shadowRay, shadowIntersection, 0.0f, t, scene.spheres);
@@ -610,7 +618,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         if (glm::length(material_intersect.specularReflect) > EPSILON) {
             //std::cout << "Intersect with specular material." << std::endl;
             glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
-            Ray reflect_ray = { position_new + e * normal, reflect_dir };
+            Ray reflect_ray = Ray( position_new + e * normal, reflect_dir, ray.time);
 			//brdf = material_intersect.specularReflect / glm::dot(reflect_dir, normal);
             //pdf = 1.0f;
             beta *= material_intersect.specularReflect;
@@ -623,7 +631,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             //std::cout << "Intersect with diffuse material." << std::endl;
             pdf = 1 / static_cast<float>(2 * M_PI);
             glm::vec3 diffuse_dir = generateRandomDirection(normal, gen);
-            Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
+            Ray diffuse_ray = { position_new + e * normal, diffuse_dir, ray.time};
             //brdf = material_intersect.diffuseReflect / static_cast<float>(M_PI);
             //beta *= brdf * abs(glm::dot(diffuse_dir, normal)) / pdf;
             //beta *= material_intersect.diffuseReflect * abs(glm::dot(diffuse_dir, normal)) * 2.0f;
@@ -744,7 +752,8 @@ void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh
                 for (int i = 0; i < samplesPerPixel; i++) {
                     //PROFILE("sample one pixel")
                     glm::vec3 sample_direction = generateSample(camera, x, y, width, height, gen);
-                    Ray ray = { camera.position, sample_direction };
+                    float ray_time = random_float()-0.5f;
+                    Ray ray = Ray( camera.position, sample_direction, ray_time);
                     glm::vec3 beta = glm::vec3(1.0f);
                     glm::vec3 color_mid = tracePath(ray, scene, bvh, 0, gen);
                     pixel_radiance += color_mid * (1.0f / static_cast<float>(samplesPerPixel));
