@@ -101,7 +101,7 @@
 		</bsdf>
 	</bsdf>
 	<bsdf type="roughdielectric" id="RoughGlassBSDF">
-		<float name="alpha" value="0.1" />
+		<float name="alpha" value="0.01" />
 		<string name="distribution" value="ggx" />
 		<float name="int_ior" value="1.5" />
 		<float name="ext_ior" value="1" />
@@ -147,12 +147,12 @@
 			<rgb name="diffuse_reflectance" value="0.578596, 0.578596, 0.578596" />
 		</bsdf>
 	</bsdf>
-	<shape type="obj" id="Ceramic_0004">
+	<shape type="obj" id="RoughGlass">
 		<string name="filename" value="models/Mesh029.obj" />
 		<transform name="to_world">
 			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
 		</transform>
-		<ref id="CeramicBSDF" />
+		<ref id="RoughGlassBSDF" />
 	</shape>
 	<shape type="obj" id="Plastic">
 		<string name="filename" value="models/Mesh038.obj" />

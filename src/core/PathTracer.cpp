@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 65;
+const int MAX_BOUNCES = 8;
 const float P = 0.6666;
 
 //point light
@@ -539,8 +539,48 @@ glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal, std::mt19937& ge
 }
 
 
+float calculateReflectionRate(
+    const glm::vec3& rayDirection, // 入射光线方向
+    const glm::vec3& normal,      // 法向量
+    float nInterior,           // 内部介质折射率
+    float nExterior            // 外部介质折射率
+) {
+    // 规范化输入方向和法向量
+    glm::vec3 normalizedRayDir = glm::normalize(rayDirection);
+    glm::vec3 normalizedNormal = glm::normalize(normal);
+
+    // 确保法向量指向正确的方向
+    float cosThetaI = std::clamp(glm::dot(normalizedRayDir, normalizedNormal), -1.0f, 1.0f);
+    bool entering = cosThetaI < 0; // 判断是否从外部进入内部
+    float n1 = entering ? nExterior : nInterior;
+    float n2 = entering ? nInterior : nExterior;
+
+    // 如果光线从内部射向外部，调整法向量方向
+    if (!entering) {
+        normalizedNormal = -normalizedNormal;
+        cosThetaI = -cosThetaI;
+    }
+	cosThetaI = abs(cosThetaI); 
+    // 计算折射角的余弦值
+    float eta = n1 / n2;
+    float sinThetaT2 = eta * eta * (1.0 - cosThetaI * cosThetaI);
+
+    // 如果发生全反射
+    if (sinThetaT2 > 1.0) {
+        return 1.0; // 完全反射
+    }
+    float cosThetaT = abs(std::sqrt(1.0 - sinThetaT2));
+
+    // 计算菲涅尔反射率
+    float Rs = (n1 * cosThetaI - n2 * cosThetaT) / (n1 * cosThetaI + n2 * cosThetaT);
+    float Rp = (n2 * cosThetaI - n1 * cosThetaT) / (n2 * cosThetaI + n1 * cosThetaT);
+
+    return (Rs * Rs + Rp * Rp) / 2.0; // 平均反射率
+}
+
 // 追踪路径
 glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen) {
+    std::uniform_real_distribution<> dis(0.0, 1.0);
     glm::vec3 beta = glm::vec3(1.0f);
     if (bounceCount >= MAX_BOUNCES)
         return glm::vec3(0.0f);
@@ -570,20 +610,44 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             return result_color;
         }
 
-        // 漫反射光照
-        if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
+        // 纯漫反射
+        if (material_intersect.type == MaterialType::Diffuse) {
             result_color += computeDiffuseLighting(intersection_scene, bvh, scene, gen, light_pdf);
+        }
+        // 纯镜面反射
+        else if (material_intersect.type == MaterialType::Conductor || material_intersect.type == MaterialType::RoughConductor) {
+            result_color += computeSpecularLighting(intersection_scene, bvh, scene, ray);
+        }
+        // 透射反射
+        else if (material_intersect.type == MaterialType::RoughDielectric) {
+			float R = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
+            if (1 - R < EPSILON) {
+                result_color += computeSpecularLighting(intersection_scene, bvh, scene, ray);
+            }
+            else {
+				result_color += R * computeSpecularLighting(intersection_scene, bvh, scene, ray) + (1 - R) * computeRefractionLighting(intersection_scene, bvh, scene, ray);
+            }
+        }
+		// 漫反射镜面反射
+        else {
+            //std::cout << "Interior: " << material_intersect.int_ior << " Outerior: " << material_intersect.ext_ior << std::endl;
+            float R0 = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
+			//std::cout << "R0: " << R0 << std::endl;
+			float cosTheta = abs(glm::dot(ray.direction, normal));
+			float R = R0 + (1 - R0) * std::pow(1 - cosTheta, 5.0f); // Schlick's approximation
+			//std::cout << "R: " << R << std::endl;
+			result_color += R * computeSpecularLighting(intersection_scene, bvh, scene, ray) + (1 - R) * computeDiffuseLighting(intersection_scene, bvh, scene, gen, light_pdf);
         }
 
         // 镜面反射光照
-        if (glm::length(material_intersect.specularReflect) > EPSILON) {
+        /*if (glm::length(material_intersect.specularReflect) > EPSILON) {
             result_color += computeSpecularLighting(intersection_scene, bvh, scene, ray);
         }
 
         // 折射光照
-        //if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
-          //  result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
-        //}
+        if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
+            result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
+        }*/
 
         // Russian Roulette for Path Termination
         if (bounceCount >= 16) {
@@ -603,26 +667,21 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         glm::vec3 brdf;
 
         // 递归反射
-        if (glm::length(material_intersect.specularReflect) > EPSILON) {
+        if (material_intersect.type == MaterialType::Conductor || material_intersect.type == MaterialType::RoughConductor) {
             //std::cout << "Intersect with specular material." << std::endl;
             glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
             Ray reflect_ray = { position_new + e * normal, reflect_dir };
 			//brdf = material_intersect.specularReflect / glm::dot(reflect_dir, normal);
             //pdf = 1.0f;
-            beta *= material_intersect.specularReflect;
-            float cosTheta = glm::dot(normal, reflect_dir);
-            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * beta;
-        }
-
-        // 递归漫反射
-        if (glm::length(material_intersect.diffuseReflect) > EPSILON) {
+            glm::vec3 beta_spec = beta * material_intersect.specularReflect;
+            result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * beta_spec;
+        } 
+        else if (material_intersect.type == MaterialType::Diffuse) {
             //std::cout << "Intersect with diffuse material." << std::endl;
             pdf = 1 / static_cast<float>(2 * M_PI);
             glm::vec3 diffuse_dir = generateRandomDirection(normal, gen);
             Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
             //brdf = material_intersect.diffuseReflect / static_cast<float>(M_PI);
-            //beta *= brdf * abs(glm::dot(diffuse_dir, normal)) / pdf;
-            //beta *= material_intersect.diffuseReflect * abs(glm::dot(diffuse_dir, normal)) * 2.0f;
             float cosTheta = glm::dot(normal, diffuse_dir);
 			float brdf_pdf = abs(cosTheta) / static_cast<float>(M_PI);
             float W;
@@ -632,20 +691,57 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             else {
                 W = PowerHeuristic(brdf_pdf, 1, light_pdf, 32);
             }
-            beta *= material_intersect.diffuseReflect;
-            result_color +=  tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * beta;
+            glm::vec3 beta_diff = beta * material_intersect.diffuseReflect;
+            result_color +=  tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * beta_diff;
         }
-
-        // 递归折射
-        /*if (material_intersect.int_ior > EPSILON && material_intersect.ext_ior > EPSILON) {
-            //std::cout << "Intersect with refraction materail." << std::endl;
-            glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
-            if (glm::length(refract_dir) > 0.0f) {
-                Ray refract_ray = { position_new - e * normal, refract_dir };
-                float cosTheta = glm::dot(normal, refract_dir);
-                result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * cosTheta / (2 * static_cast<float> (M_PI));
+        else if (material_intersect.type == MaterialType::RoughDielectric) {
+            float R = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
+            float x = dis(gen);
+            if (x <= R) {
+                glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
+                Ray reflect_ray = { position_new + e * normal, reflect_dir };
+                glm::vec3 beta_spec = beta * material_intersect.specularReflect;
+                result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * beta_spec;
             }
-        }*/
+            else {
+                glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
+                if (glm::length(refract_dir) > 0.0f) {
+                    Ray refract_ray = { position_new - e * normal, refract_dir };
+                    float cosTheta = glm::dot(normal, refract_dir);
+                    glm::vec3 beta_ref = beta * cosTheta / (2 * static_cast<float> (M_PI));
+                    result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * beta_ref;
+                }
+            }
+        }
+        else {
+            float R0 = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
+            float cosTheta = abs(glm::dot(ray.direction, normal));
+            float R = R0 + (1 - R0) * std::pow(1 - cosTheta, 5.0f); // Schlick's approximation
+            float x = dis(gen);
+            if (x <= R) {
+                glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
+                Ray reflect_ray = { position_new + e * normal, reflect_dir };
+                glm::vec3 beta_spec = beta * R;
+				//std::cout << "R: " << R << std::endl;
+                result_color += tracePath(reflect_ray, scene, bvh, bounceCount_new, gen) * beta_spec;
+            }
+            else {
+                pdf = 1 / static_cast<float>(2 * M_PI);
+                glm::vec3 diffuse_dir = generateRandomDirection(normal, gen);
+                Ray diffuse_ray = { position_new + e * normal, diffuse_dir };
+                float cosTheta = glm::dot(normal, diffuse_dir);
+                float brdf_pdf = abs(cosTheta) / static_cast<float>(M_PI);
+                float W;
+                if (glm::length(light_pdf) < EPSILON) {
+                    W = 1.0f;
+                }
+                else {
+                    W = PowerHeuristic(brdf_pdf, 1, light_pdf, 32);
+                }
+                glm::vec3 beta_diff = beta * material_intersect.diffuseReflect;
+                result_color += tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * beta_diff;
+            }
+        }
     }
     else if (useHDR) {
         // 如果没有相交并启用了 HDR，使用 HDR 纹理
