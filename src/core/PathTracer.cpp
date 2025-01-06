@@ -651,7 +651,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             }
         }*/
     }
-    else if (useHDR) {
+    /*else if (useHDR) {
         // 如果没有相交并启用了 HDR，使用 HDR 纹理
         std::cout << "No intersection, use HDR." << std::endl;
         return sampleEquirectangularMap(environmentMap, ray.direction) * 10.0f;
@@ -660,7 +660,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         // 没有相交也没有 HDR，返回背景色
         std::cout << "No intersection, don't use HDR." << std::endl;
         return glm::vec3(0.0f);
-    }
+    }*/
 
     return result_color;
 }

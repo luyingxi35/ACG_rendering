@@ -235,7 +235,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         }
 
         // handle rectangle
-        /*else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
+        else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
             auto model = std::make_shared<Model>();
 
             // extract material
@@ -306,6 +306,6 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 addModel(model);
             }
 
-        }*/
+        }
     }
 }
