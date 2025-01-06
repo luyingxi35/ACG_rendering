@@ -304,30 +304,30 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 triangles.push_back(tri2);
 
                 addModel(model);
-
-                glm::vec3 center = glm::vec3(-19.0f, 0.0f, -36.0f);
-                // 定义单位矩形的四个顶点
-                v0 = glm::vec3(0.0f, 0.0f, 0.0f);
-                v1 = glm::vec3(40.0f, 0.0f, 0.0f);
-                v2 = glm::vec3(40.0f, 40.0f, 0.0f);
-                v3 = glm::vec3(0.0f, 40.0f, 0.0f);
-
-                // 应用变换矩阵
-                v0 = v0 + center;
-                v1 = v1 + center;
-                v2 = v2 + center;
-                v3 = v3 + center;
-
-                Material material = Material();
-                material.twoSided = true;
-                material.diffuseReflect = glm::vec3(0.578596, 0.578596, 0.578596);
-
-                Triangle tri1_1 = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material);
-                Triangle tri2_1 = Triangle(v0, v2, v3, (v0 + v2 + v3) * 0.33333f, material);
-                triangles.push_back(tri1);
-                triangles.push_back(tri2);
             }
 
         }
     }
+
+    glm::vec3 center_tri = glm::vec3(-70.0f, -50.0f, 35.1f);
+    // 定义单位矩形的四个顶点
+    glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 v1 = glm::vec3(130.0f, 0.0f, 0.0f);
+    glm::vec3 v2 = glm::vec3(130.0f, 140.0f, 0.0f);
+    glm::vec3 v3 = glm::vec3(0.0f, 140.0f, 0.0f);
+
+    // 应用变换矩阵
+    v0 = v0 + center_tri;
+    v1 = v1 + center_tri;
+    v2 = v2 + center_tri;
+    v3 = v3 + center_tri;
+
+    Material material = Material();
+    material.twoSided = true;
+    material.diffuseReflect = glm::vec3(0.578596, 0.578596, 0.578596);
+
+    Triangle tri1_1 = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material);
+    Triangle tri2_1 = Triangle(v0, v2, v3, (v0 + v2 + v3) * 0.33333f, material);
+    triangles.push_back(tri1_1);
+    triangles.push_back(tri2_1);
 }

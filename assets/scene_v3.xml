@@ -25,7 +25,7 @@
 	</sensor>
 	<bsdf type="twosided" id="WallBSDF">
 		<bsdf type="diffuse">
-			<rgb name="reflectance" value="0.578596, 0.578596, 0.578596" />
+			<rgb name="reflectance" value="0.55,0.6,0.65" />
 		</bsdf>
 	</bsdf>
 	<bsdf type="twosided" id="MirrorBSDF">
@@ -69,7 +69,7 @@
 				<!--<string name="filter_type" value="bilinear" />-->
 			<!--</texture>-->
 			<texture name="diffuse_reflectance" type="constant">
-				<rgb name="value" value="0.545,0.271,0.075" />
+				<rgb name="value" value="0.15, 0.2, 0.35" />
 			</texture>
 		</bsdf>
 	</bsdf>
@@ -85,7 +85,7 @@
 				<!--<string name="filter_type" value="bilinear" />-->
 			<!--</texture>-->
 			<texture name="diffuse_reflectance" type="constant">
-				<rgb name="value" value="0.545,0.271,0.075" />
+				<rgb name="value" value="0.3, 0.4, 0.5" />
 			</texture>
 		</bsdf>
 	</bsdf>
@@ -96,7 +96,7 @@
 				<!--<string name="filter_type" value="bilinear" />-->
 			<!--</texture>-->
 			<texture name="diffuse_reflectance" type="constant">
-				<rgb name="value" value="0.545,0.271,0.075" />
+				<rgb name="value" value="0.15, 0.2, 0.35" />
 			</texture>
 		</bsdf>
 	</bsdf>
@@ -126,7 +126,7 @@
 	</bsdf>
 	<bsdf type="twosided" id="WallRightBSDF">
 		<bsdf type="diffuse">
-			<rgb name="reflectance" value="0.578596, 0.578596, 0.578596" />
+			<rgb name="reflectance" value="0.55,0.6,0.65" />
 		</bsdf>
 	</bsdf>
 	<bsdf type="twosided" id="DarkBorderBSDF">
