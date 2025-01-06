@@ -550,11 +550,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
     Intersection intersection_scene;
     float t = 1e6f;  // init t set to a large value
     bool intersect_scene = bvh.intersect(ray, intersection_scene, 0.0f, t, scene.spheres);
-    if (!intersect_scene) {
-        // std::cout << "No intersection." << std::endl;
-        return result_color;
-    }
-
+ 
     if (intersect_scene) {
         // std::cout << std::endl << std::endl << "Intersected!" << std::endl;
         const Material material_intersect = intersection_scene.material();
@@ -651,16 +647,16 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             }
         }*/
     }
-    /*else if (useHDR) {
+    else if (useHDR) {
         // 如果没有相交并启用了 HDR，使用 HDR 纹理
-        std::cout << "No intersection, use HDR." << std::endl;
-        return sampleEquirectangularMap(environmentMap, ray.direction) * 10.0f;
+        //std::cout << "No intersection, use HDR." << std::endl;
+        return sampleEquirectangularMap(environmentMap, ray.direction);
     }
     else {
         // 没有相交也没有 HDR，返回背景色
-        std::cout << "No intersection, don't use HDR." << std::endl;
+        //std::cout << "No intersection, don't use HDR." << std::endl;
         return glm::vec3(0.0f);
-    }*/
+    }
 
     return result_color;
 }

@@ -134,7 +134,7 @@ Material Scene::extractMaterialFromBSDF(pugi::xml_node bsdf) {
 //}
 
 void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Light>& lights, Camera& camera) {
-    glm::vec3 sphere_center = { 0.0f, 15.0f, 0.0f };
+    /*glm::vec3 sphere_center = {0.0f, 15.0f, 0.0f};
     float sphere_radius = 37.0f;
     Material sphere_material;
     sphere_material.diffuseReflect = glm::vec3(1.0f);
@@ -143,7 +143,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     Sphere sphere = Sphere(sphere_center, sphere_radius, sphere_material);
     spheres.push_back(sphere);
 
-    std::cout << "Number of spheres: " << spheres.size() << std::endl;
+    std::cout << "Number of spheres: " << spheres.size() << std::endl;*/
 
     pugi::xml_document doc;
     if (!doc.load_file(xmlPath.c_str())) {
@@ -283,7 +283,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 0.2f; // 根据需要调整强度
+                    light.intensity = 2.5f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
 
@@ -304,6 +304,28 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 triangles.push_back(tri2);
 
                 addModel(model);
+
+                glm::vec3 center = glm::vec3(-19.0f, 0.0f, -36.0f);
+                // 定义单位矩形的四个顶点
+                v0 = glm::vec3(0.0f, 0.0f, 0.0f);
+                v1 = glm::vec3(40.0f, 0.0f, 0.0f);
+                v2 = glm::vec3(40.0f, 40.0f, 0.0f);
+                v3 = glm::vec3(0.0f, 40.0f, 0.0f);
+
+                // 应用变换矩阵
+                v0 = v0 + center;
+                v1 = v1 + center;
+                v2 = v2 + center;
+                v3 = v3 + center;
+
+                Material material = Material();
+                material.twoSided = true;
+                material.diffuseReflect = glm::vec3(0.578596, 0.578596, 0.578596);
+
+                Triangle tri1_1 = Triangle(v0, v1, v2, (v0 + v1 + v2) * 0.33333f, material);
+                Triangle tri2_1 = Triangle(v0, v2, v3, (v0 + v2 + v3) * 0.33333f, material);
+                triangles.push_back(tri1);
+                triangles.push_back(tri2);
             }
 
         }
