@@ -235,7 +235,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
         }
 
         // handle rectangle
-        else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
+        /*else if (std::string(shapeNode.attribute("type").value()) == "rectangle") {
             auto model = std::make_shared<Model>();
 
             // extract material
@@ -252,7 +252,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
             // 加载变换矩阵
             pugi::xml_node matrixNode = shapeNode.child("transform").child("matrix");
             std::string matrixValueRect = matrixNode.attribute("value").as_string();
-            glm::vec3 center = { -7 , 15 , -24.9 };
+            glm::vec3 center = { 0.0f , 29.0f , 0.0f };
             glm::mat3 rotation = { {4.51251, 0, 0}, {0, 5.3468, 6.49714e-008}, {0, 6.49714e-008, 3.86042} };
             rotation = glm::transpose(rotation);
 
@@ -260,9 +260,9 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
             // 定义单位矩形的四个顶点
             glm::vec3 v0 = glm::vec3(0.0f, 0.0f, 0.0f);
-            glm::vec3 v1 = glm::vec3(9.5f, 0.0f, 0.0f);
-            glm::vec3 v2 = glm::vec3(9.5f, 13.0f, 0.0f);
-            glm::vec3 v3 = glm::vec3(0.0f, 13.0f, 0.0f);
+            glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 0.0f);
+            glm::vec3 v2 = glm::vec3(1.0f, 1.0f, 0.0f);
+            glm::vec3 v3 = glm::vec3(0.0f, 1.0f, 0.0f);
 
             // 应用变换矩阵
             v0 = v0 + center;
@@ -306,6 +306,6 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                 addModel(model);
             }
 
-        }
+        }*/
     }
 }

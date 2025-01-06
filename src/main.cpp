@@ -16,10 +16,15 @@ int main() {
 
     // create pathTracer and BVH Tree
     PathTracer pathTracer;
+
+    // º”‘ÿ HDR Ã˘Õº
+    std::string hdrFilePath = "assets/meadow_4k.hdr";
+    pathTracer.loadEnvironmentMap(hdrFilePath);
+
     BVH bvh(scene);
 
     // rendering the scene and output the picture
-    pathTracer.render(scene, scene.camera, bvh, 1280, 720, 64, 16);  
+    pathTracer.render(scene, scene.camera, bvh, 320, 180, 16, 16);  
 
     std::cout << "Rendering complete!" << std::endl;
     return 0;

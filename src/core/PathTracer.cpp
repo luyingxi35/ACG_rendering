@@ -651,10 +651,16 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             }
         }*/
     }
-    // else {
-    //     // 背景颜色，可选
-    //     // result_color += bg_color;
-    // }
+    else if (useHDR) {
+        // 如果没有相交并启用了 HDR，使用 HDR 纹理
+        std::cout << "No intersection, use HDR." << std::endl;
+        return sampleEquirectangularMap(environmentMap, ray.direction) * 10.0f;
+    }
+    else {
+        // 没有相交也没有 HDR，返回背景色
+        std::cout << "No intersection, don't use HDR." << std::endl;
+        return glm::vec3(0.0f);
+    }
 
     return result_color;
 }
@@ -678,39 +684,6 @@ glm::vec3 generateSample(const Camera& camera, int x, int y, int width, int heig
     return sample_direction;
 }
 
-// 渲染图像的一部分，无需互斥锁，因为每个线程处理独立的像素区域
-/*void PathTracer::renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
-    int width, int height, int samplesPerPixel,
-    int yStart, int yEnd, std::vector<glm::vec3>& framebuffer,
-    std::mt19937& gen) {
-
-    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
-
-    for (int x = 0; x < width; ++x) {
-        for (int y = yStart; y < yEnd; y++) {
-            if (x < 0 || x >= width || y < 0 || y >= height) {
-                std::cerr << "Pixel index out-of-bounds: (" << x << ", " << y << ")\n";
-                continue;
-            }
-            glm::vec3 pixel_radiance(0.0f, 0.0f, 0.0f);
-
-            for (int i = 0; i < samplesPerPixel; ++i) {
-                glm::vec3 sample_direction = generateSample(camera, x, y, width, height, gen);
-                Ray ray = { camera.position, sample_direction };
-                glm::vec3 color_mid = tracePath(ray, scene, bvh, 0, gen);
-                pixel_radiance += color_mid * (1.0f / static_cast<float>(samplesPerPixel));
-            }
-
-            // 建议移除调试输出以提升性能和避免竞争
-            
-            std::cout << "Finish rendering pixel (" << x << ", " << y << ")." << std::endl;
-            // std::cout << "Color: " << pixel_radiance[0] << " " << pixel_radiance[1] << " " << pixel_radiance[2] << std::endl;
-
-            // 直接写入帧缓冲，无需互斥锁
-            framebuffer[y * width + x] += pixel_radiance;
-        }
-    }
-}*/
 
 void PathTracer::renderWorker(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel,
     std::vector<glm::vec3>& framebuffer, std::mt19937& gen) {
@@ -770,6 +743,10 @@ void PathTracer::render(const Scene& scene, const Camera& camera, BVH& bvh,
     // 确保 framebuffer 大小正确
     std::vector<glm::vec3> framebuffer(width * height, glm::vec3(0.0f));
     std::vector<std::thread> threadPool;
+
+    if (useHDR) {
+        std::cout << "Using HDR environment lighting..." << std::endl;
+    }
 
     const int xtileSize = width / 10;
     const int ytileSize = height / 10;

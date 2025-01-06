@@ -21,6 +21,7 @@
 #include <cmath>
 #include <queue>
 #include "../utils/Profile.h"
+#include "../scene/hdr.h"
 
 struct Task {
 	int xStart;
@@ -62,19 +63,34 @@ public:
 		}
 		condition.notify_all();
 	}
+	void loadEnvironmentMap(const std::string& hdrFilePath) {
+		try {
+			environmentMap = loadHDR(hdrFilePath); // 调用 HDR 加载函数
+			useHDR = true;
+			std::cout << "HDR environment map loaded: " << hdrFilePath << std::endl;
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Failed to load HDR map: " << e.what() << std::endl;
+			useHDR = false;
+		}
+	}
 
 private:
+	HDRImage environmentMap; // 存储加载的 HDR 纹理
+	bool useHDR = false;     // 标志是否启用 HDR
 	std::mutex queue_mutex;
 	std::condition_variable condition;
 	std::queue<Task> task_queue;
 	bool done = false;
 	std::mutex cout_mutex;
+
 	glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen, float &light_pdf);
 	glm::vec3 computeSpecularLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray);
 	glm::vec3 refractDirection(const glm::vec3& incident, const glm::vec3& normal, float ext_ior, float int_ior);
 	glm::vec3 computeRefractionLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray);
 	glm::vec3 computeFresnelConductor(float cosTheta, const glm::vec3& eta, const glm::vec3& k);
 	glm::vec3 generateRandomDirection(glm::vec3 normal, std::mt19937& gen);
+
 };
 
 #endif
