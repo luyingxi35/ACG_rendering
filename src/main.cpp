@@ -20,7 +20,8 @@ int main() {
 
     // rendering the scene and output the picture
     //pathTracer.render(scene, scene.camera, bvh, 2560, 1440, 64, 16);
-    pathTracer.render(scene, scene.camera, bvh, 320, 180, 64, 16);
+    pathTracer.render(scene, scene.camera, bvh, 1280, 640, 128, 16, 0, 1);
+	//the last term is IsCartoon, 0 for normal rendering, 1 for cartoon rendering
 
     std::cout << "Rendering complete!" << std::endl;
     return 0;

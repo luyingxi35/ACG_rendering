@@ -34,6 +34,8 @@ struct Camera {
     glm::vec3 position;
     glm::mat3 rotationMatrix;
     float fov;
+    float aperture;       // 光圈大小
+    float focusDistance;  // 焦平面距离
 };
 
 // 光线类
@@ -86,9 +88,9 @@ public:
     glm::vec2 vt0, vt1, vt2; // 三个纹理坐标
     Material material;
     glm::vec3 centroid;
-    AABB bounding_box; \
+    AABB bounding_box; 
 
-        float bilinearInterpolate(const glm::vec2& uv, std::shared_ptr<Texture> texture) {
+    float bilinearInterpolate(const glm::vec2& uv, std::shared_ptr<Texture> texture) {
         int width = texture->width;
         int height = texture->height;
 

@@ -39,16 +39,16 @@ glm::vec3 extractRGB(pugi::xml_node bsdf, const std::string& name) {
             return extractColor(node.attribute("value").as_string());
         }
     }
-    //// 2. for texture
-    //for (auto node : bsdf.children("texture")) {
-    //    if (node && std::string(node.attribute("name").as_string()) == name &&
-    //        std::string(node.attribute("type").as_string()) == "constant") {
-    //        auto rgbNode = node.child("rgb");
-    //        if (rgbNode && std::string(rgbNode.attribute("name").as_string()) == "value") {
-    //            return extractColor(rgbNode.attribute("value").as_string());
-    //        }
-    //    }
-    //}
+    // 2. for texture
+    for (auto node : bsdf.children("texture")) {
+        if (node && std::string(node.attribute("name").as_string()) == name &&
+            std::string(node.attribute("type").as_string()) == "constant") {
+            auto rgbNode = node.child("rgb");
+            if (rgbNode && std::string(rgbNode.attribute("name").as_string()) == "value") {
+                return extractColor(rgbNode.attribute("value").as_string());
+            }
+        }
+    }
     return glm::vec3(0.0f);
 }
 
@@ -246,10 +246,10 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     }
 
     /*Light light_point;
-    light_point.position = { 0.0f, 33.0f, 0.0f };
+    light_point.position = { 0.0f, 35.0f, 0.0f };
     light_point.u = glm::vec3(0.0f);
     light_point.v = glm::vec3(0.0f);
-    light_point.intensity = 0.5f;
+    light_point.intensity = 15.0f;
     light_point.color = { 125, 100, 75 };
 	light_point.samples = 32;
     lights.push_back(light_point);*/
@@ -263,6 +263,8 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
     // camera.rotationMatrix = { {-1,0,0}, {0,1,0}, {0,0,-1} };
     camera.position = glm::vec3(4.0f, 12.0f, 35.0f);
+    camera.aperture = 0.4f;      // 光圈大小
+    camera.focusDistance = 20.0f; // 焦平面距离
 
     std::cout << "Camera loaded: Position(" << camera.position.x << ", " << camera.position.y << ", " << camera.position.z << ")\n";
 
@@ -381,7 +383,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
                     light.u = v1 - v0;
                     light.v = v3 - v0;
                     light.color = radiance;
-                    light.intensity = 0.05f; // 根据需要调整强度
+                    light.intensity = 0.1f; // 根据需要调整强度
                     light.samples = 32;
                     lights.push_back(light);
 

@@ -30,14 +30,14 @@ struct Task {
 
 class PathTracer {
 public:
-	void render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel, int numThreads);
-	glm::vec3 tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen);
+	void render(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel, int numThreads, int IsDOF, int IsCartoon);
+	glm::vec3 tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen, Intersection& intersection_scene);
 	/*void renderSection(const Scene& scene, const Camera& camera, BVH& bvh,
 		int width, int height, int samplesPerPixel,
 		int xStart, int xEnd,
 		std::vector<glm::vec3>& framebuffer, std::mt19937& gen);*/
 	void renderWorker(const Scene& scene, const Camera& camera, BVH& bvh, int width, int height, int samplesPerPixel,
-		std::vector<glm::vec3>& framebuffer, std::mt19937& gen);
+		std::vector<glm::vec3>& framebuffer, std::vector<float>& depthBuffer, std::vector<glm::vec3>& normalBuffer, std::mt19937& gen, int IsDOF);
 	void enqueueTasks(int xtileSize, int ytileSize, int width, int height) {
 		for (int y = 0; y < height; y += ytileSize) {
 			for (int x = 0; x < width; x += xtileSize) {
@@ -68,7 +68,8 @@ private:
 	std::queue<Task> task_queue;
 	bool done = false;
 	std::mutex cout_mutex;
-	glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen);
+	//glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen);
+	glm::vec3 computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen, float& light_pdf);
 	glm::vec3 computeSpecularLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray);
 	glm::vec3 refractDirection(const glm::vec3& incident, const glm::vec3& normal, float ext_ior, float int_ior);
 	glm::vec3 computeRefractionLighting(Intersection& intersection, BVH& bvh, const Scene& scene, const Ray& ray);
