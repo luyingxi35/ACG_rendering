@@ -519,7 +519,7 @@
 		<transform name="to_world">
 			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
 		</transform>
-		<ref id="WoodBSDF" />
+		<ref id="RoughGlassBSDF" />
 	</shape>
 	<shape type="obj" id="Ceramic_0003">
 		<string name="filename" value="models/Mesh004.obj" />

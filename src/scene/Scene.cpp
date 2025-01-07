@@ -176,7 +176,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
     for (auto shapeNode : doc.child("scene").children("shape")) {
         if (std::string(shapeNode.attribute("type").value()) == "obj") {
             std::string path = shapeNode.child("string").attribute("value").as_string();
-            //if (path == "models/Mesh000.obj" || path == "models/Mesh001.obj" || path == "models/Mesh005.obj" || path == "models/Mesh008.obj" || path == "models/Mesh046.obj" || path == "models/Mesh045.obj" || path == "models/Mesh050.obj" || path == "models/Mesh052.obj") {
+            if (path == "models/Mesh000.obj" || path == "models/Mesh001.obj" || path == "models/Mesh005.obj" || path == "models/Mesh008.obj" || path == "models/Mesh046.obj" || path == "models/Mesh045.obj" || path == "models/Mesh004.obj") {
                 std::string filepath = "assets/";
                 filepath.append(path);
                 //std::cout << filepath << std::endl;
@@ -231,7 +231,7 @@ void Scene::extractSceneDataFromXML(const std::string& xmlPath, std::vector<Ligh
 
 
                 addModel(model);
-            //}
+            }
         }
 
         // handle rectangle

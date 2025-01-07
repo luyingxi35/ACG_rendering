@@ -2,7 +2,7 @@
 #define EPSILON 1e-6
 #define M_PI 3.1415926535
 
-const int MAX_BOUNCES = 8;
+const int MAX_BOUNCES = 16;
 const float P = 0.6666;
 
 //point light
@@ -53,6 +53,46 @@ float PowerHeuristic(const float& pdf_s, const float& n_s, const float& pdf_f, c
     else
         return glm::pow(pdf_s * n_s, 2.0f) / (glm::pow(pdf_s * n_s, 2.0f) + glm::pow(pdf_f * n_f, 2.0f));
 }
+
+float calculateReflectionRate(
+    const glm::vec3& rayDirection, // 入射光线方向
+    const glm::vec3& normal,      // 法向量
+    float nInterior,           // 内部介质折射率
+    float nExterior            // 外部介质折射率
+) {
+    // 规范化输入方向和法向量
+    glm::vec3 normalizedRayDir = glm::normalize(rayDirection);
+    glm::vec3 normalizedNormal = glm::normalize(normal);
+
+    // 确保法向量指向正确的方向
+    float cosThetaI = std::clamp(glm::dot(normalizedRayDir, normalizedNormal), -1.0f, 1.0f);
+    bool entering = cosThetaI < 0; // 判断是否从外部进入内部
+    float n1 = entering ? nExterior : nInterior;
+    float n2 = entering ? nInterior : nExterior;
+
+    // 如果光线从内部射向外部，调整法向量方向
+    if (!entering) {
+        normalizedNormal = -normalizedNormal;
+        cosThetaI = -cosThetaI;
+    }
+    cosThetaI = abs(cosThetaI);
+    // 计算折射角的余弦值
+    float eta = n1 / n2;
+    float sinThetaT2 = eta * eta * (1.0 - cosThetaI * cosThetaI);
+
+    // 如果发生全反射
+    if (sinThetaT2 > 1.0) {
+        return 1.0; // 完全反射
+    }
+    float cosThetaT = abs(std::sqrt(1.0 - sinThetaT2));
+
+    // 计算菲涅尔反射率
+    float Rs = (n1 * cosThetaI - n2 * cosThetaT) / (n1 * cosThetaI + n2 * cosThetaT);
+    float Rp = (n2 * cosThetaI - n1 * cosThetaT) / (n2 * cosThetaI + n1 * cosThetaT);
+
+    return (Rs * Rs + Rp * Rp) / 2.0; // 平均反射率
+}
+
 
 // 漫反射光照
 glm::vec3 PathTracer::computeDiffuseLighting(Intersection& intersection, BVH& bvh, const Scene& scene, std::mt19937& gen, float &light_pdf) {
@@ -471,13 +511,13 @@ glm::vec3 PathTracer::computeRefractionLighting(Intersection& intersection, BVH&
                 float intIOR = intersection.material().int_ior;
                 float extIOR = intersection.material().ext_ior;
                 float eta_f = intIOR / extIOR;
-                float F0 = 0.04f;
+                float F0 = 0.01f;
 
                 glm::vec3 halfDir = glm::normalize(lightDir + viewDir);
                 float fresnelTerm = GGX_F(viewDir, halfDir, F0);
 
                 // 将折射贡献累积
-                lightContribution += (1.0f - fresnelTerm) * attenuation * light.color;
+                lightContribution += attenuation * light.color;
             }
 
             // 将所有采样的贡献平均
@@ -539,45 +579,6 @@ glm::vec3 PathTracer::generateRandomDirection(glm::vec3 normal, std::mt19937& ge
 }
 
 
-float calculateReflectionRate(
-    const glm::vec3& rayDirection, // 入射光线方向
-    const glm::vec3& normal,      // 法向量
-    float nInterior,           // 内部介质折射率
-    float nExterior            // 外部介质折射率
-) {
-    // 规范化输入方向和法向量
-    glm::vec3 normalizedRayDir = glm::normalize(rayDirection);
-    glm::vec3 normalizedNormal = glm::normalize(normal);
-
-    // 确保法向量指向正确的方向
-    float cosThetaI = std::clamp(glm::dot(normalizedRayDir, normalizedNormal), -1.0f, 1.0f);
-    bool entering = cosThetaI < 0; // 判断是否从外部进入内部
-    float n1 = entering ? nExterior : nInterior;
-    float n2 = entering ? nInterior : nExterior;
-
-    // 如果光线从内部射向外部，调整法向量方向
-    if (!entering) {
-        normalizedNormal = -normalizedNormal;
-        cosThetaI = -cosThetaI;
-    }
-	cosThetaI = abs(cosThetaI); 
-    // 计算折射角的余弦值
-    float eta = n1 / n2;
-    float sinThetaT2 = eta * eta * (1.0 - cosThetaI * cosThetaI);
-
-    // 如果发生全反射
-    if (sinThetaT2 > 1.0) {
-        return 1.0; // 完全反射
-    }
-    float cosThetaT = abs(std::sqrt(1.0 - sinThetaT2));
-
-    // 计算菲涅尔反射率
-    float Rs = (n1 * cosThetaI - n2 * cosThetaT) / (n1 * cosThetaI + n2 * cosThetaT);
-    float Rp = (n2 * cosThetaI - n1 * cosThetaT) / (n2 * cosThetaI + n1 * cosThetaT);
-
-    return (Rs * Rs + Rp * Rp) / 2.0; // 平均反射率
-}
-
 // 追踪路径
 glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounceCount, std::mt19937& gen) {
     std::uniform_real_distribution<> dis(0.0, 1.0);
@@ -620,13 +621,14 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
         }
         // 透射反射
         else if (material_intersect.type == MaterialType::RoughDielectric) {
-			float R = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
+			/*float R = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
             if (1 - R < EPSILON) {
                 result_color += computeSpecularLighting(intersection_scene, bvh, scene, ray);
             }
             else {
 				result_color += R * computeSpecularLighting(intersection_scene, bvh, scene, ray) + (1 - R) * computeRefractionLighting(intersection_scene, bvh, scene, ray);
-            }
+            }*/
+			result_color += computeRefractionLighting(intersection_scene, bvh, scene, ray);
         }
 		// 漫反射镜面反射
         else {
@@ -695,7 +697,7 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
             result_color +=  tracePath(diffuse_ray, scene, bvh, bounceCount_new, gen) * beta_diff;
         }
         else if (material_intersect.type == MaterialType::RoughDielectric) {
-            float R = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
+            /*float R = calculateReflectionRate(ray.direction, normal, material_intersect.int_ior, material_intersect.ext_ior);
             float x = dis(gen);
             if (x <= R) {
                 glm::vec3 reflect_dir = glm::reflect(ray.direction, normal);
@@ -711,6 +713,13 @@ glm::vec3 PathTracer::tracePath(Ray ray, const Scene& scene, BVH& bvh, int bounc
                     glm::vec3 beta_ref = beta * cosTheta / (2 * static_cast<float> (M_PI));
                     result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * beta_ref;
                 }
+            }*/
+            glm::vec3 refract_dir = refractDirection(ray.direction, normal, material_intersect.ext_ior, material_intersect.int_ior);
+            if (glm::length(refract_dir) > EPSILON) {
+                Ray refract_ray = { position_new - e * normal, refract_dir };
+                float cosTheta = glm::dot(normal, refract_dir);
+                glm::vec3 beta_ref = beta * cosTheta / (2 * static_cast<float> (M_PI));
+                result_color += tracePath(refract_ray, scene, bvh, bounceCount_new, gen) * beta;
             }
         }
         else {
